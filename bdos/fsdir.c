@@ -2,7 +2,7 @@
  * fsdir.c - directory routines for the file system
  *
  * Copyright (C) 2001 Lineo, Inc.
- *               2002-2019 The EmuTOS development team
+ *               2002-2020 The EmuTOS development team
  *
  * This file is distributed under the GPL, version 2 or at your
  * option any later version.  See doc/license.txt for details.
@@ -1234,7 +1234,7 @@ long xgetdir(char *buf, int drv)
 /* dn: dir descr for dir */
 FCB *dirinit(DND *dn)
 {
-    OFD *fd;            /*  ofd for this dir  */
+    OFD *fd;            /*  OFD for this dir  */
     int num;
     RECNO i2;
     UBYTE *s1;
@@ -1432,7 +1432,7 @@ DND *findit(char *name, const char **sp, int dflag)
          *     become the parent, and get the node on the left,
          *     which is the first child.
          */
-        pp = p;                 /*  save ptr to parent dnd      */
+        pp = p;                 /*  save ptr to parent DND      */
 
         if (!(newp = p->d_left))
         {                               /*  [1] [see below]     */
@@ -1471,7 +1471,7 @@ DND *findit(char *name, const char **sp, int dflag)
     } while (p && i);
 
     /* p = 0 ==> not found
-     i = 0 ==> found at p (dnd entry)
+     i = 0 ==> found at p (DND entry)
      n = points at filename */
 
     *sp = n;
@@ -1497,7 +1497,7 @@ DND *findit(char *name, const char **sp, int dflag)
  *  scan - scan a directory for an entry with the desired name.
  *      scans a directory indicated by a DND.  attributes figure in matching
  *      as well as the entry's name.  posp is an indicator as to where to start
- *      searching.  A posp of -1 means to use the scan pointer in the dnd, and
+ *      searching.  A posp of -1 means to use the scan pointer in the DND, and
  *      return the pointer to the DND, not the FCB.
  */
 FCB *scan(DND *dnd, const char *n, WORD att, LONG *posp)
@@ -1844,7 +1844,7 @@ static void makbuf(FCB *f, DTAINFO *dt)
 
 
 /*
- *  getdnd - find a dnd with matching name
+ *  getdnd - find a DND with matching name
  */
 static DND *getdnd(char *n, DND *d)
 {

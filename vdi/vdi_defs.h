@@ -2,7 +2,7 @@
  * vdi_defs.h - Definitions for virtual workstations
  *
  * Copyright 1999 by Caldera, Inc.
- * Copyright 2005-2019 The EmuTOS development team.
+ * Copyright 2005-2020 The EmuTOS development team.
  *
  * This file is distributed under the GPL, version 2 or at your
  * option any later version.  See doc/license.txt for details.
@@ -92,7 +92,7 @@
 #define SUBROUTINE  5
 #define VDI_HANDLE  6
 
-/* text style bits: for vwk->style (and also lineA variable STYLE) */
+/* text style bits: for vwk->style (and also line-A variable STYLE) */
 #define F_THICKEN   1
 #define F_LIGHT     2
 #define F_SKEW      4

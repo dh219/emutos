@@ -4,7 +4,7 @@
 
 /*
 *       Copyright 1999, Caldera Thin Clients, Inc.
-*       Copyright (C) 2002-2019 The EmuTOS development team
+*       Copyright (C) 2002-2020 The EmuTOS development team
 *
 *       This software is licenced under the GNU Public License.
 *       Please see LICENSE.TXT for further information.
@@ -1162,7 +1162,7 @@ void app_save(WORD todisk)
 #endif
 
 #if CONF_WITH_DESKTOP_CONFIG
-    /* save menu item sortcuts */
+    /* save menu item shortcuts */
     *pcurr++ = '#';
     *pcurr++ = 'K';
     for (i = 0; i < NUM_SHORTCUTS; i++)

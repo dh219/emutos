@@ -2,7 +2,7 @@
  * proc.c - process management routines
  *
  * Copyright (C) 2001 Lineo, Inc. and Authors:
- *               2002-2019 The EmuTOS development team
+ *               2002-2020 The EmuTOS development team
  *
  *  KTB     Karl T. Braun (kral)
  *  MAD     Martin Doering
@@ -585,7 +585,7 @@ void x0term(void)
 /*
  * xterm - (Pterm) terminate current process
  *
- * terminate the current process and transfer control to the colling
+ * terminate the current process and transfer control to the calling
  * process.  All files opened by the terminating process are closed.
  *
  * Function 0x4C        p_term

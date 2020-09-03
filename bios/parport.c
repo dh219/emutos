@@ -1,7 +1,7 @@
 /*
  * parport.c - limited parallel port support
  *
- * Copyright (C) 2002-2019 The EmuTOS development team
+ * Copyright (C) 2002-2020 The EmuTOS development team
  *
  * Authors:
  *  LVL   Laurent Vogel
@@ -24,7 +24,7 @@
 
 /*
  * known differences with respect to the original TOS:
- * - printer configuration and hardcopy not done
+ * - printer hardcopy is not done
  * - no input
  */
 

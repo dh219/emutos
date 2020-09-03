@@ -2,7 +2,7 @@
  * vdimain.c - the VDI screen driver dispatcher
  *
  * Copyright (C) 1999 Caldera, Inc.
- *               2002-2019 The EmuTOS development team
+ *               2002-2020 The EmuTOS development team
  *
  * This file is distributed under the GPL, version 2 or at your
  * option any later version.  See doc/license.txt for details.
@@ -147,13 +147,24 @@ void screen(void)
     }
 
     /*
-     * set some lineA variables from the vwk info (as long as
+     * at this point, for v_opnwk() and v_opnvwk(), vwk is NULL.  we
+     * must fix this before we use it to set the lineA variables below.
+     * fortunately, v_opnwk() and v_opnvwk() have set CUR_WORK to a
+     * valid value (see vdi_control.c).  so we use this to set vwk.
+     */
+    if ((opcode == 1) || (opcode == 100))
+    {
+        vwk = CUR_WORK;
+    }
+
+    /*
+     * set some line-A variables from the vwk info (as long as
      * the workstation is valid)
      */
     if (opcode != 2 && opcode != 101) {     /* if neither v_clswk() nor v_clsvwk() */
         /*
          * the following assignments are not required by EmuTOS, but
-         * ensure that the values in the lineA variables mirror those
+         * ensure that the values in the line-A variables mirror those
          * in the current virtual workstation, just like in Atari TOS.
          */
         CUR_FONT = vwk->cur_font;

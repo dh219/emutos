@@ -4,7 +4,7 @@
 
 /*
 *       Copyright 1999, Caldera Thin Clients, Inc.
-*                 2002-2019 The EmuTOS development team
+*                 2002-2020 The EmuTOS development team
 *
 *       This software is licenced under the GNU Public License.
 *       Please see LICENSE.TXT for further information.
@@ -93,7 +93,7 @@ static WORD     gl_hsptschar;
 
 /*
  *  Routine to set the clip rectangle.  If the w,h of the clip is 0,
- *  then no clip should be set.  Ohterwise, set the appropriate clip.
+ *  then no clip should be set.  Otherwise, set the appropriate clip.
  */
 void gsx_sclip(const GRECT *pt)
 {

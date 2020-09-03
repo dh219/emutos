@@ -1,7 +1,7 @@
 /*
  * vdi_col.c - VDI color palette functions and tables.
  *
- * Copyright (C) 2005-2019 The EmuTOS development team
+ * Copyright (C) 2005-2020 The EmuTOS development team
  *
  * This file is distributed under the GPL, version 2 or at your
  * option any later version.  See doc/license.txt for details.
@@ -24,7 +24,7 @@
 #endif
 
 /*
- * the following lineA variables contain the VDI color palette entries.
+ * the following line-A variables contain the VDI color palette entries.
  * REQ_COL contains the first 16 entries; req_col2 contains entries
  * 16-255 (only applicable for 8-plane resolutions).  Note that the
  * location of req_col2 is not documented by Atari, but is derived from

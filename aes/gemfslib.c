@@ -2,7 +2,7 @@
  * gemfslib.c - the file selector
  *
  * Copyright 1999, Caldera Thin Clients, Inc.
- *           2002-2019 The EmuTOS development team
+ *           2002-2020 The EmuTOS development team
  *
  * This file is distributed under the GPL, version 2 or at your
  * option any later version.  See doc/license.txt for details.
@@ -503,7 +503,7 @@ static WORD get_drive(char *path)
 
 /*
  *  File Selector input routine that takes control of the mouse
- *  and keyboard, searchs and sort the directory, draws the file
+ *  and keyboard, searches and sorts the directory, draws the file
  *  selector, interacts with the user to determine a selection
  *  or change of path, and returns to the application with
  *  the selected path, filename, and exit button.

@@ -3,7 +3,7 @@
  *
  * Copyright 1982 by Digital Research Inc.  All rights reserved.
  * Copyright 1999 by Caldera, Inc. and Authors:
- * Copyright 2002-2019 The EmuTOS development team
+ * Copyright 2002-2020 The EmuTOS development team
  *
  * This file is distributed under the GPL, version 2 or at your
  * option any later version.  See doc/license.txt for details.
@@ -996,7 +996,7 @@ void contourfill(const VwkAttrib * attr, const VwkClip *clip)
 /*
  * no_abort
  *
- * the VDI routine v_contourfill() calls the lineA routine contourfill()
+ * the VDI routine v_contourfill() calls the line-A routine contourfill()
  * to do its work.  contourfill() calls the routine pointed to by SEEDABORT
  * on a regular basis to determine whether to prematurely abort the fill.
  * we initialise SEEDABORT to point to the routine below, which never
@@ -1038,7 +1038,7 @@ void vdi_v_get_pixel(Vwk * vwk)
 
 
 /*
- * get_pix - gets a pixel (just for linea!)
+ * get_pix - gets a pixel (just for line-A)
  *
  * input:
  *     PTSIN(0) = x coordinate.
@@ -1056,7 +1056,7 @@ get_pix(void)
 
 
 /*
- * put_pix - plot a pixel (just for linea!)
+ * put_pix - plot a pixel (just for line-A)
  *
  * input:
  *     INTIN(0) = pixel value.

@@ -1,7 +1,7 @@
 /*
  * blkdev.c - BIOS block device functions
  *
- * Copyright (C) 2002-2019 The EmuTOS development team
+ * Copyright (C) 2002-2020 The EmuTOS development team
  *
  * Authors:
  *  MAD     Martin Doering
@@ -774,7 +774,7 @@ LONG blkdev_drvmap(void)
 
 
 /*
- * blkdev_avail - Read drive bitmapCheck drive availability
+ * blkdev_avail - Check drive availability
  *
  * Returns 0, if drive not available
  */

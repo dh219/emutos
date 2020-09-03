@@ -6,7 +6,7 @@
 
 /*
 *       Copyright 1999, Caldera Thin Clients, Inc.
-*                 2002-2019 The EmuTOS development team
+*                 2002-2020 The EmuTOS development team
 *
 *       This software is licenced under the GNU Public License.
 *       Please see LICENSE.TXT for further information.
@@ -790,7 +790,7 @@ void gem_main(void)
             break;
 #endif
         }
-        gsx_wsclear();              /* avoid artefacts that may show briefly */
+        gsx_wsclear();              /* avoid artifacts that may show briefly */
         /*
          * resolution change always resets the default drive to the
          * boot device.  TOS3 issues a Dsetdrv() when this happens,

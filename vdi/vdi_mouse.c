@@ -3,7 +3,7 @@
  *
  * Copyright 1982 by Digital Research Inc.  All rights reserved.
  * Copyright 1999 by Caldera, Inc. and Authors:
- * Copyright 2002-2019 by The EmuTOS development team
+ * Copyright 2002-2020 by The EmuTOS development team
  *
  * This file is distributed under the GPL, version 2 or at your
  * option any later version.  See doc/license.txt for details.
@@ -37,7 +37,7 @@ struct Mcdb_ {
         UWORD   maskdata[32];   /* mask & data are interleaved */
 };
 
-/* mouse related linea variables in bios/lineavars.S */
+/* mouse related line-A variables in bios/lineavars.S */
 extern void     (*user_but)(void);      /* user button vector */
 extern void     (*user_cur)(void);      /* user cursor vector */
 extern void     (*user_mot)(void);      /* user motion vector */
@@ -246,7 +246,7 @@ static WORD gloc_key(void)
  *    positions are the current positions, and the terminating character
  *    is the ASCII key pressed, or 0x20 for the left mouse button / 0x21
  *    for the right.
- *    As a consequence, pressing the space key twice is indistingishable
+ *    As a consequence, pressing the space key twice is indistinguishable
  *    from pressing/releasing the left mouse button, and likewise for
  *    the exclamation mark and the right mouse button.
  *
@@ -262,7 +262,7 @@ static WORD gloc_key(void)
  *    . if a mouse button is pressed or released, the terminating
  *      character is 0x20 for the left button, 0x21 for the right
  *      button, and CONTRL[4] is set to 1
- *    . the output mouse psitions are always set to the same as the
+ *    . the output mouse positions are always set to the same as the
  *      input
  *
  * Differences from official Atari documentation

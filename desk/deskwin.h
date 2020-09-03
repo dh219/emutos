@@ -2,7 +2,7 @@
 /*      changed NUM_WOBS from 128 to 300        11/19/87        mdf     */
 /*
 *       Copyright 1999, Caldera Thin Clients, Inc.
-*                 2002-2019 The EmuTOS development team
+*                 2002-2020 The EmuTOS development team
 *
 *       This software is licenced under the GNU Public License.
 *       Please see LICENSE.TXT for further information.
@@ -74,7 +74,7 @@ struct _windnode
 /*
  * the following array must be large enough to hold the sprintf-formatted
  * output of the longest translated version of the STINFOST/STINFST2 resource item.
- * as of december 2014, this is 51 bytes for the Greek-language version.
+ * as of august 2020, this is 68 bytes for the Greek-language version of STINFST2.
  */
         char            w_info[72];
 };

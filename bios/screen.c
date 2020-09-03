@@ -1,7 +1,7 @@
 /*
  * screen.c - low-level screen routines
  *
- * Copyright (C) 2001-2019 The EmuTOS development team
+ * Copyright (C) 2001-2020 The EmuTOS development team
  *
  * Authors:
  *  MAD   Martin Doering
@@ -825,7 +825,7 @@ static __inline__ void get_std_pixel_size(WORD *width,WORD *height)
  *
  * pixel sizes returned here affect (at least) how the following
  * are displayed:
- *  - the output from v_arc()/v_circle()/vie_pslice()
+ *  - the output from v_arc()/v_circle()/v_pieslice()
  *  - the size of gl_wbox in pixels
  */
 void get_pixel_size(WORD *width,WORD *height)

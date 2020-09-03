@@ -48,7 +48,7 @@ static int use_16bit_io;
 
 #define CRTC_I  0x3D4   /* CRT Controller index and data ports */
 #define CRTC_D  0x3D5
-#define GDC_SEG 0x3CD   /* GDC segement select, index and data ports */
+#define GDC_SEG 0x3CD   /* GDC segment select, index and data ports */
 #define GDC_I   0x3CE
 #define GDC_D   0x3CF
 #define TS_I    0x3C4   /* Timing Sequencer index and data ports */
@@ -197,7 +197,7 @@ void detect_nova(void)
     }
     else if (HAS_VME && check_read_byte(0x00DC0000UL+VIDSUB))
     {
-        /* Nova in Atari MegaSTE */
+        /* Nova in Atari MegaSTe */
         novaregbase = (UBYTE *)0x00DC0000UL;
         novamembase = (UBYTE *)0x00C00000UL;
         has_nova = 1;
@@ -272,7 +272,7 @@ static void init_mach32(void)
     VGAREG(MEM_BNDRY) = 0x00;
     VGAREG_W(MEM_CFG) = 0x0202;
     VGAREG_W(ROM_ADDR_1) = 0x0040;
-    // VGAREG_W(SCRATCH_PAD_1) = 0x0000;
+    /* VGAREG_W(SCRATCH_PAD_1) = 0x0000; */
     VGAREG(ADVFUNC_CNTL) = 0x03;    /* Go to 8514 mode */
     VGAREG_W(SUBSYS_CNTL) = 0x90;   /* 8514 reset */
     VGAREG_W(SUBSYS_CNTL) = 0x50;
@@ -285,7 +285,7 @@ static void init_mach32(void)
     VGAREG(MISC_CNTL+1) = (VGAREG(R_MISC_CNTL+1) & 0xF0) | 0x0C;
     VGAREG_W(EXT_GE_CONFIG) = 0x1A40; /* DAC 8 bit mode. */
     VGAREG_W(HORZ_OVERSCAN) = 0;
-    //VGAREG(ATI_DAC_R2) = 0xFF     /* DAC mask register. Set later. */
+    /* VGAREG(ATI_DAC_R2) = 0xFF; */   /* DAC mask register. Set later. */
 
     VGAREG_W(CLOCK_SEL) = 0x5002;   /* Back to ATI mode and clock select */
 

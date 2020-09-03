@@ -1,7 +1,7 @@
 /*
  *  erd: the EmuTOS Resource Decompiler
  *
- *  Copyright 2012-2019 Roger Burrows
+ *  Copyright 2012-2020 Roger Burrows
  *
  *  This program is licensed under the GNU General Public License.
  *  Please see LICENSE.TXT for details.
@@ -182,7 +182,7 @@
  *
  *  v5.2    roger burrows, november/2017
  *          . EmuDesk now builds the menu separator lines dynamically, so
- *            (a) we no longer need to mark them as translateable, and
+ *            (a) we no longer need to mark them as translatable, and
  *            (b) we can truncate them to one byte to save ROM space
  *
  *  v5.3    roger burrows, december/2017

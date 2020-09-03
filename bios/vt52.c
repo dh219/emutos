@@ -2,7 +2,7 @@
  * vt52.c - vt52 like screen handling routines
  *
  *
- * Copyright (C) 2013-2019 The EmuTOS development team
+ * Copyright (C) 2013-2020 The EmuTOS development team
  * Copyright (C) 2004 Martin Doering
  *
  * Authors:
@@ -877,7 +877,7 @@ WORD cursconf(WORD function, WORD operand)
 {
     switch (function) {
     case 0:
-        cursor_off();                   /* set cursor unvisible */
+        cursor_off();                   /* set cursor non-visible */
         break;
     case 1:
         cursor_on();                    /* set cursor visible */
