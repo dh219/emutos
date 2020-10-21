@@ -201,7 +201,8 @@ bios_src +=  memory.S processor.S vectors.S aciavecs.S bios.c xbios.c acsi.c \
              parport.c screen.c serport.c sound.c videl.c vt52.c xhdi.c \
              pmmu030.c 68040_pmmu.S \
              amiga.c amiga2.S spi_vamp.c \
-             delay.c delayasm.S sd.c memory2.c bootparams.c scsi.c nova.c
+             delay.c delayasm.S sd.c memory2.c bootparams.c scsi.c nova.c \
+             dsp.c dsp2.S
 
 ifeq (1,$(COLDFIRE))
   bios_src += coldfire.c coldfire2.S spi_cf.c
@@ -489,6 +490,7 @@ ROM_512 = etos512k.img
 SYMFILE = $(addsuffix .sym,$(basename $(ROM_512)))
 
 .PHONY: 512
+512: OPTFLAGS = $(SMALL_OPTFLAGS)
 512: override DEF += -DTARGET_512
 512: $(ROM_512) $(SYMFILE)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\

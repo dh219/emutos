@@ -43,6 +43,7 @@
 #include "floppy.h"
 #include "sound.h"
 #include "dmasound.h"
+#include "dsp.h"
 #include "screen.h"
 #include "clock.h"
 #include "vectors.h"
@@ -405,6 +406,15 @@ static void bios_init(void)
     calibrate_delay();  /* determine values for delay() function */
                         /*  - requires interrupts to be enabled  */
 
+    /* Initialize the DSP.  Since we currently use the system timer
+     * in dsp_execboot(), which is called from dsp_init(), the latter
+     * must be called *after* interrupts are enabled.
+     */
+#if CONF_WITH_DSP
+    KDEBUG(("dsp_init()\n"));
+    dsp_init();
+#endif
+
     /* User configurable boot delay to allow harddisks etc. to get ready */
     if (FIRST_BOOT && osxhbootdelay)
     {
@@ -431,7 +441,7 @@ static void bios_init(void)
 
 #if CONF_WITH_NOVA
     /* Detect and initialize a Nova card, skip if Ctrl is pressed */
-    if (has_nova && !(kbshift(-1) & MODE_CTRL)) {
+    if (HAS_NOVA && !(kbshift(-1) & MODE_CTRL)) {
         KDEBUG(("init_nova()\n"));
         if (init_nova()) {
             set_rez_hacked();   /* also reinitializes the vt52 console */

@@ -93,8 +93,8 @@ static WORD shifter_check_moderez(WORD moderez)
         if (return_rez == TT_HIGH)
             return_rez = TT_MEDIUM;
     } else {
-        if (return_rez > ST_MEDIUM)
-            return_rez = ST_MEDIUM;
+        if (return_rez == ST_HIGH)
+            return_rez = ST_LOW;
     }
 
     return (return_rez==getrez())?0:(0xff00|return_rez);
@@ -559,6 +559,14 @@ void screen_init_mode(void)
 
         rez = monitor_type?ST_LOW:ST_HIGH;
         *(volatile UBYTE *) ST_SHIFTER = rez;
+
+#if CONF_WITH_STE_SHIFTER
+        /* On the STe, reset the additional video registers to default values. */
+        if (has_ste_shifter) {
+            *(volatile UBYTE *)STE_LINE_OFFSET = 0;
+            *(volatile UBYTE *)STE_HORZ_SCROLL = 0;
+        }
+#endif
     }
 
 #if CONF_WITH_VIDEL
