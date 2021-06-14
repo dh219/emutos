@@ -62,7 +62,7 @@ struct _filenode
     WORD  f_seq;            /* sequence within directory */
     WORD  f_obid;           /* index into G.g_screen[] for this object */
     ANODE *f_pa;            /* ANODE to get icon# from */
-    WORD  f_isap;           /* if TRUE, use a_aicon in ANODE, else use a_dicon */
+    BOOL  f_isap;           /* if TRUE, use a_aicon in ANODE, else use a_dicon */
 };
 
 
@@ -87,5 +87,7 @@ void pn_close(PNODE *thepath);
 PNODE *pn_open(char *pathname, WNODE *pw);
 FNODE *pn_sort(PNODE *pn);
 WORD pn_active(PNODE *thepath, BOOL include_folders);
+FNODE *pn_selected(WNODE *pw);
+void pn_count(WNODE *pw, WORD *nsel, WORD *napp);
 
 #endif  /* _DESKFPD_H */

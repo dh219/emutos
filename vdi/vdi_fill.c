@@ -175,7 +175,6 @@ void vdi_vsf_interior(Vwk * vwk)
 {
     WORD fs;
 
-    CONTRL[4] = 1;
     fs = ((INTIN[0]<MIN_FILL_STYLE) || (INTIN[0]>MAX_FILL_STYLE)) ? DEF_FILL_STYLE : INTIN[0];
 
     INTOUT[0] = vwk->fill_style = fs;
@@ -189,7 +188,6 @@ void vdi_vsf_style(Vwk * vwk)
 {
     WORD fi;
 
-    CONTRL[4] = 1;
     fi = INTIN[0];
 
     if (vwk->fill_style == FIS_PATTERN) {
@@ -210,7 +208,6 @@ void vdi_vsf_color(Vwk * vwk)
 {
     WORD fc;
 
-    CONTRL[4] = 1;
     fc = validate_color_index(INTIN[0]);
 
     INTOUT[0] = fc;
@@ -229,7 +226,6 @@ void vdi_vsf_perimeter(Vwk * vwk)
         INTOUT[0] = 1;
         vwk->fill_per = TRUE;
     }
-    CONTRL[4] = 1;
 }
 
 
@@ -333,8 +329,6 @@ void vdi_vqf_attributes(Vwk * vwk)
     *pointer++ = vwk->fill_index + 1;
     *pointer++ = vwk->wrt_mode + 1;
     *pointer = vwk->fill_per;
-
-    CONTRL[4] = 5;
 }
 
 
@@ -641,13 +635,11 @@ void vdi_v_fillarea(Vwk * vwk)
     Point * point = (Point*)PTSIN;
     int count = CONTRL[1];
 
-#if 0
 #if HAVE_BEZIER
     /* check, if we want to draw a filled bezier curve */
     if (CONTRL[5] == 13 && vwk->bez_qual )
         v_bez_fill(vwk, point, count);
     else
-#endif
 #endif
         polygon(vwk, point, count);
 }
@@ -1032,7 +1024,6 @@ void vdi_v_get_pixel(Vwk * vwk)
 
     INTOUT[0] = pel;
     INTOUT[1] = REV_MAP_COL[pel];
-    CONTRL[4] = 2;
 }
 
 

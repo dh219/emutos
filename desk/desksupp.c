@@ -128,8 +128,8 @@ void desk_clear(WORD wh)
 
     /*
      * if 'root' is still DROOT, then either the 'window' is the desktop
-     * (wh==0), or something is wrong with the window setup.  to handle
-     * the latter case, we force the handle to 0 anyway for safety.
+     * (wh==DESKWH), or something is wrong with the window setup.  to handle
+     * the latter case, we force the handle to the desktop anyway for safety.
      */
     if (root == DROOT)
         wh = DESKWH;
@@ -171,7 +171,7 @@ void desk_verify(WORD wh, WORD changed)
     WNODE *pw;
     GRECT clip;
 
-    if (wh)
+    if (wh != DESKWH)
     {
         /* get current size */
         pw = win_find(wh);
@@ -180,7 +180,7 @@ void desk_verify(WORD wh, WORD changed)
             if (changed)
             {
                 wind_get_grect(wh, WF_WXYWH, &clip);
-                win_bldview(pw, clip.g_x, clip.g_y, clip.g_w, clip.g_h);
+                win_bldview(pw, &clip);
             }
             G.g_croot = pw->w_root;
         }
@@ -250,19 +250,19 @@ static ICONBLK *get_iconblk_ptr(OBJECT olist[], WORD obj)
 void do_xyfix(WORD *px, WORD *py)
 {
     *px = (*px + 8) & 0xfff0;   /* horizontally align to nearest word boundary */
-    if (*py < G.g_ydesk)        /* ensure it's below menu bar */
-        *py = G.g_ydesk;
+    if (*py < G.g_desk.g_y)     /* ensure it's below menu bar */
+        *py = G.g_desk.g_y;
 }
 
 
 /*
  * open a window, normally corresponding to a disk drive icon on the desktop
  *
- * if curr == 0, there is no 'source' screen object from which the new
+ * if curr <= 0, there is no 'source' screen object from which the new
  * object is coming, so we do not do the zoom effect & we do not try to
  * reset the object state.
  *
- * if curr != 0, there *is* a source object: we always do the zoom effect,
+ * if curr > 0, there *is* a source object: we always do the zoom effect,
  * and change the object state, but we only redraw the object when we are
  * opening a new window.  otherwise, we must be showing the new data in
  * an existing window: the FNODE for the 'source' object has already been
@@ -274,11 +274,14 @@ void do_xyfix(WORD *px, WORD *py)
  * if we did allow a redraw, at best the display would show the wrong
  * values (or garbage) briefly; at worst, the desktop would crash.
  */
-void do_wopen(WORD new_win, WORD wh, WORD curr, WORD x, WORD y, WORD w, WORD h)
+void do_wopen(WORD new_win, WORD wh, WORD curr, GRECT *pt)
 {
+    GRECT t;
     GRECT c, d;
 
-    do_xyfix(&x, &y);
+    t = *pt;
+
+    do_xyfix(&t.g_x, &t.g_y);
 
     if (curr > 0)
     {
@@ -292,12 +295,12 @@ void do_wopen(WORD new_win, WORD wh, WORD curr, WORD x, WORD y, WORD w, WORD h)
         d.g_x += c.g_x;     /* convert window to screen coordinates */
         d.g_y += c.g_y;
 
-        graf_growbox(d.g_x, d.g_y, d.g_w, d.g_h, x, y, w, h);
+        graf_growbox_grect(&d, &t);
         act_chg(G.g_cwin, G.g_croot, curr, &gl_rfull, FALSE, new_win?TRUE:FALSE);
     }
 
     if (new_win)
-        wind_open(wh, x, y, w, h);
+        wind_open_grect(wh, &t);
 
     G.g_wlastsel = wh;
 }
@@ -317,13 +320,11 @@ void do_wfull(WORD wh)
     if (rc_equal(&curr, &full)) /* currently full, so shrink */
     {
         wind_set_grect(wh, WF_CXYWH, &prev);
-        graf_shrinkbox(prev.g_x, prev.g_y, prev.g_w, prev.g_h,
-                        full.g_x, full.g_y, full.g_w, full.g_h);
+        graf_shrinkbox_grect(&prev, &full);
         return;
     }
 
-    graf_growbox(curr.g_x, curr.g_y, curr.g_w, curr.g_h,
-                full.g_x, full.g_y, full.g_w, full.g_h);
+    graf_growbox_grect(&curr, &full);
     wind_set_grect(wh, WF_CXYWH, &full);
 }
 
@@ -389,7 +390,7 @@ void remove_locate_shortcut(WORD curr)
             strcpy(p, fname);
         else
             *(p-1) = '\0';
-        scan_str(path,&pa->a_pdata);
+        scan_str(path, &pa->a_pappl);
     }
 }
 #endif
@@ -433,8 +434,7 @@ WORD do_diropen(WNODE *pw, WORD new_win, WORD curr_icon,
     wind_set(pw->w_id, WF_NAME, pw->w_name, 0, 0);
 
     /* do actual wind_open  */
-    do_wopen(new_win, pw->w_id, curr_icon,
-                pt->g_x, pt->g_y, pt->g_w, pt->g_h);
+    do_wopen(new_win, pw->w_id, curr_icon, pt);
     if (new_win)
         win_top(pw);
 
@@ -763,8 +763,8 @@ static void show_file(char *name,LONG bufsize,char *iobuf)
 
     handle = (WORD)rc;
 
-    scr_width = G.g_wdesk;
-    scr_height = G.g_ydesk + G.g_hdesk;
+    scr_width = G.g_desk.g_w;
+    scr_height = G.g_desk.g_y + G.g_desk.g_h;
 
     /*
      * set up for text output
@@ -775,7 +775,7 @@ static void show_file(char *name,LONG bufsize,char *iobuf)
     form_dial(FMD_START, 0,0,0,0, 0,0,scr_width,scr_height);
     clear_screen();
 
-    pagesize = (G.g_ydesk+G.g_hdesk)/gl_hchar - 1;
+    pagesize = (G.g_desk.g_y+G.g_desk.g_h)/gl_hchar - 1;
     linecount = 0L;
 
     while(1)
@@ -820,7 +820,7 @@ static void show_file(char *name,LONG bufsize,char *iobuf)
  *
  *  returns TRUE iff shel_write() was issued successfully
  */
-WORD do_aopen(ANODE *pa, WORD isapp, WORD curr, char *pathname, char *pname, char *tail)
+WORD do_aopen(ANODE *pa, BOOL isapp, WORD curr, char *pathname, char *pname, char *tail)
 {
     WNODE *pw;
     WORD ret;
@@ -1182,16 +1182,32 @@ static void printer_alert(ANODE *pa)
 /*
  *  Open an icon
  */
-WORD do_open(WORD curr)
+WORD do_open(WNODE *pwin, WORD curr)
 {
     ANODE *pa;
     WNODE *pw;
     FNODE *pf;
-    WORD isapp;
+    BOOL isapp;
     char pathname[MAXPATHLEN];
     char filename[LEN_ZFNAME];
 
-    pa = i_find(G.g_cwin, curr, &pf, &isapp);
+    /*
+     * if the icon is on the desktop, we get the ANODE from the item#;
+     * otherwise, we must go via the filenodes, because the icon may
+     * not be currently visible
+     */
+    if (G.g_cwin == DESKWH)
+    {
+        pa = i_find(DESKWH, curr, &pf, &isapp);
+    }
+    else
+    {
+        pf = pn_selected(pwin); /* get first selected file */
+        if (!pf)
+            return FALSE;
+        pa = pf->f_pa;
+        isapp = pf->f_isap;
+    }
     if (!pa)
         return FALSE;
 
@@ -1206,16 +1222,16 @@ WORD do_open(WORD curr)
 #if CONF_WITH_DESKTOP_SHORTCUTS
         if (pa->a_flags & AF_ISDESK)
         {
-            char *p = filename_start(pa->a_pdata);
+            char *p = filename_start(pa->a_pappl);
             /* check for root folder */
-            if ((pa->a_type == AT_ISFOLD) && (p == pa->a_pdata))
+            if ((pa->a_type == AT_ISFOLD) && (p == pa->a_pappl))
             {
-                strcpy(pathname, pa->a_pdata);
+                strcpy(pathname, pa->a_pappl);
                 filename[0] = '\0';
             }
             else
             {
-                strlcpy(pathname, pa->a_pdata, p - pa->a_pdata);
+                strlcpy(pathname, pa->a_pappl, p-pa->a_pappl);
                 strcpy(filename, p);
             }
             strcat(pathname, "\\*.*");
@@ -1291,7 +1307,7 @@ WORD do_info(WORD curr)
             {
                 DTA *dta;
 
-                dta = file_exists(pa->a_pdata, NULL);
+                dta = file_exists(pa->a_pappl, NULL);
                 if (!dta)
                 {
                     remove_locate_shortcut(curr);
@@ -1300,7 +1316,7 @@ WORD do_info(WORD curr)
 
                 pf = &fn;
                 memcpy(&pf->f_attr, &dta->d_attrib, 23);
-                strcpy(pathname, pa->a_pdata);
+                strcpy(pathname, pa->a_pappl);
                 strcpy(filename_start(pathname),"*.*");
                 pathptr = pathname;
             }
@@ -1676,18 +1692,18 @@ void refresh_drive(WORD drive)
  *
  *  returns NULL if no matching index
  */
-ANODE *i_find(WORD wh, WORD item, FNODE **ppf, WORD *pisapp)
+ANODE *i_find(WORD wh, WORD item, FNODE **ppf, BOOL *pisapp)
 {
     ANODE *pa;
     WNODE *pw;
     FNODE *pf;
-    WORD isapp;
+    BOOL isapp;
 
     pa = (ANODE *) NULL;
     pf = (FNODE *) NULL;
     isapp = FALSE;
 
-    if (!wh)        /* On desktop? */
+    if (wh == DESKWH)       /* On desktop? */
     {
         pa = app_afind_by_id(item);
         if (pa)

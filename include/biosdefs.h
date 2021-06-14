@@ -14,6 +14,9 @@
 #ifndef BIOSDEFS_H
 #define BIOSDEFS_H
 
+/* Number of hz_200 ticks per second */
+#define CLOCKS_PER_SEC 200UL
+
 /*
  * Universal constant (for older drives, anyway)
  */
@@ -167,5 +170,38 @@ typedef void (*ETV_TIMER_T)(int ms); /* Type of BDOS Event Timer */
 #define IDT_YYDDMM (IDT_BIT_YM | IDT_BIT_DM)
 #define IDT_DMASK  (IDT_BIT_YM | IDT_BIT_DM)
 #define IDT_SMASK  0xFF  /* separator mask */
+
+/* Mfpint() vector indices */
+/* Taken from MiNTLib's include/mint/ostruct.h */
+#define MFP_PARALLEL           0
+#define MFP_DCD                1
+#define MFP_CTS                2
+#define MFP_BITBLT             3
+#define MFP_TIMERD             4
+#define MFP_BAUDRATE  MFP_TIMERD
+#define MFP_200HZ              5
+#define MFP_ACIA               6
+#define MFP_DISK               7
+#define MFP_TIMERB             8
+#define MFP_HBLANK    MFP_TIMERB
+#define MFP_TERR               9
+#define MFP_TBE               10
+#define MFP_RERR              11
+#define MFP_RBF               12
+#define MFP_TIMERA            13
+#define MFP_DMASOUND  MFP_TIMERA
+#define MFP_RING              14
+#define MFP_MONODETECT        15
+
+/* Bitmasks for Offgibit()/Ongibit() */
+/* Taken from MiNTLib's include/mint/ostruct.h */
+#define GI_FLOPPYSIDE   0x01
+#define GI_FLOPPYA      0x02
+#define GI_FLOPPYB      0x04
+#define GI_RTS          0x08
+#define GI_DTR          0x10
+#define GI_STROBE       0x20
+#define GI_GPO          0x40
+#define GI_SCCPORT      0x80
 
 #endif /* BIOSDEFS_H */

@@ -25,48 +25,48 @@
 struct dmasound
 {
     /* STe/TT DMA registers */
-    UBYTE interrupt; /* Buffer interrupts */
-    UBYTE control; /* DMA Control Register */
+    UBYTE interrupt;            /* Buffer interrupts */
+    UBYTE control;              /* DMA Control Register */
     UBYTE filler02;
-    UBYTE frame_start_high; /* Frame start address (high byte) */
+    UBYTE frame_start_high;     /* Frame start address (high byte) */
     UBYTE filler04;
-    UBYTE frame_start_mid; /* Frame start address (mid byte) */
+    UBYTE frame_start_mid;      /* Frame start address (mid byte) */
     UBYTE filler06;
-    UBYTE frame_start_low; /* Frame start address (low byte) */
+    UBYTE frame_start_low;      /* Frame start address (low byte) */
     UBYTE filler08;
-    UBYTE frame_counter_high; /* Frame address counter (high byte) */
+    UBYTE frame_counter_high;   /* Frame address counter (high byte) */
     UBYTE filler0a;
-    UBYTE frame_counter_mid; /* Frame address counter (mid byte) */
+    UBYTE frame_counter_mid;    /* Frame address counter (mid byte) */
     UBYTE filler0c;
-    UBYTE frame_counter_low; /* Frame address counter (low byte) */
+    UBYTE frame_counter_low;    /* Frame address counter (low byte) */
     UBYTE filler0e;
-    UBYTE frame_end_high; /* Frame end address (high byte) */
+    UBYTE frame_end_high;       /* Frame end address (high byte) */
     UBYTE filler10;
-    UBYTE frame_end_mid; /* Frame end address (mid byte) */
+    UBYTE frame_end_mid;        /* Frame end address (mid byte) */
     UBYTE filler12;
-    UBYTE frame_end_low; /* Frame end address (low byte) */
+    UBYTE frame_end_low;        /* Frame end address (low byte) */
     UBYTE filler14[12];
-    UBYTE track_control; /* DMA Track Control */
-    UBYTE mode_control; /* Sound mode control */
+    UBYTE track_control;        /* DMA Track Control */
+    UBYTE mode_control;         /* Sound mode control */
     /* STe/TT Microwire interface registers */
-    UWORD microwire_data; /* Microwire data register */
-    UWORD microwire_mask; /* Microwire mask register */
+    UWORD microwire_data;       /* Microwire data register */
+    UWORD microwire_mask;       /* Microwire mask register */
     UBYTE filler26[10];
     /* Falcon DMA registers */
-    UWORD crossbar_src; /* Crossbar Source Controller */
-    UWORD crossbar_dest; /* Crossbar Destination Controller */
-    UBYTE freq_ext; /* Frequency Divider External Clock */
-    UBYTE freq_int; /* Frequency Divider Internal Sync */
-    UBYTE record_tracks; /* Record Tracks Select */
-    UBYTE codec_16bit_source; /* CODEC Input Source from 16bit adder */
-    UBYTE codec_adc_source; /* CODEC ADC-Input for L+R Channel */
-    UBYTE channel_amplification; /* Channel amplification */
-    UWORD channel_attenuation; /* Channel attenuation */
-    UWORD codec_status; /* CODEC-Status */
+    UWORD crossbar_src;         /* Crossbar Source Controller */
+    UWORD crossbar_dest;        /* Crossbar Destination Controller */
+    UBYTE freq_ext;             /* Frequency Divider External Clock */
+    UBYTE freq_int;             /* Frequency Divider Internal Sync */
+    UBYTE record_tracks;        /* Record Tracks Select */
+    UBYTE codec_16bit_source;   /* CODEC Input Source from 16bit adder */
+    UBYTE codec_adc_source;     /* CODEC ADC-Input for L+R Channel */
+    UBYTE channel_amplification;/* Channel amplification */
+    UWORD channel_attenuation;  /* Channel attenuation */
+    UWORD codec_status;         /* CODEC-Status */
     UBYTE filler3e[3];
-    UBYTE gpx_data_direction; /* GPx Data Direction */
+    UBYTE gpx_data_direction;   /* GPx Data Direction */
     UBYTE filler42;
-    UBYTE gpx_data_port; /* GPx Data Port */
+    UBYTE gpx_data_port;        /* GPx Data Port */
 };
 
 #define DMASOUND ((volatile struct dmasound*)0xffff8900)
@@ -524,14 +524,14 @@ LONG dsptristate(WORD dspxmit, WORD dsprec)
         return EBADRQ;
 
     if (dspxmit)
-        DMASOUND->crossbar_src |= 0x80;
+        DMASOUND->crossbar_src |= 0x0080;
     else
-        DMASOUND->crossbar_src &= 0x7f;
+        DMASOUND->crossbar_src &= ~0x0080;
 
     if (dsprec)
-        DMASOUND->crossbar_dest |= 0x80;
+        DMASOUND->crossbar_dest |= 0x0080;
     else
-        DMASOUND->crossbar_dest &= 0x7f;
+        DMASOUND->crossbar_dest &= ~0x0080;
 
     return 0;
 }
@@ -723,7 +723,25 @@ LONG devconnect(WORD source, WORD dest, WORD clk, WORD prescale, WORD protocol)
     return devconnect_ste(source, dest, clk, prescale, protocol);
 }
 
-
+/**
+ * Get sound status or reset sound system
+ *
+ * To reset the sound system, we toggle bit3 of the byte at $ff8937
+ * (codec_16bit_source).  This zeroes the following fields: 
+ *      $ff8920     track_control
+ *      $ff8921     mode_control
+ *      $ff8930-31  crossbar_src
+ *      $ff8932-33  crossbar_dest
+ *      $ff8934     freq_ext
+ *      $ff8935     freq_int
+ *      $ff8936     record_tracks
+ *      $ff8937     codec_16bit_source (except bit 3 which we zero ourselves :-))
+ *      $ff8938     codec_adc_source
+ *      $ff8939     channel_amplification
+ *      $ff893a-3b  channel_attenuation
+ * in addition:
+ *      $ff893c-3d  codec_status is set to $003f
+ */
 LONG sndstatus(WORD reset)
 {
     if (!SOUND_IS_AVAILABLE)

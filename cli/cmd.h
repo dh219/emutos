@@ -131,6 +131,7 @@ extern LONG jmp_xbios(WORD, ...);
 #define TT_MEDIUM       4
 #define TT_HIGH         6
 #define TT_LOW          7
+#define BLACK           0x0000          /* for Setcolor() */
 
 /*
  *  typedefs
@@ -205,6 +206,7 @@ extern WORD nflops_copy;
 extern DTA *dta;
 extern LONG redir_handle;
 extern char user_path[MAXPATHLEN];     /* from PATH command */
+extern char *environment;              /* from cmdasm.S */
 
 /*
  *  function prototypes

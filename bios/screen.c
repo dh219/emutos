@@ -33,9 +33,9 @@
 #include "biosmem.h"
 #include "biosext.h"
 #include "bios.h"
-#ifdef MACHINE_AMIGA
 #include "amiga.h"
-#endif
+#include "lisa.h"
+#include "nova.h"
 
 void detect_monitor_change(void);
 static void setphys(const UBYTE *addr);
@@ -178,8 +178,20 @@ WORD esetshift(WORD mode)
     if (!has_tt_shifter)
         return 0x50;    /* unimplemented xbios call: return function # */
 
+    /*
+     * to avoid a possible resolution change in the middle of a screen
+     * display, we wait for a VBL (TOS3 does this too)
+     */
+    vsync();
+
     oldmode = *resreg & TT_SHIFTER_BITMASK;
     *resreg = mode & TT_SHIFTER_BITMASK;
+
+    /*
+     * because the resolution may have changed, we must reinitialise
+     * the VT52 emulator
+     */
+    vt52_init();
 
     return oldmode;
 }
@@ -534,14 +546,14 @@ void screen_init_mode(void)
         /* fix the video mode according to the actual monitor */
         boot_resolution = vfixmode(boot_resolution);
         KDEBUG(("Fixed boot video mode is 0x%04x\n", boot_resolution));
-        vsetmode(boot_resolution);
-        rez = FALCON_REZ;   /* fake value indicates Falcon/Videl */
+        vsetmode(boot_resolution);  /* sets 'sshiftmod' */
+        rez = sshiftmod;
     }
     else
 #endif /* CONF_WITH_VIDEL */
 #if CONF_WITH_TT_SHIFTER
     if (has_tt_shifter) {
-        rez = monitor_type?TT_MEDIUM:TT_HIGH;
+        sshiftmod = rez = monitor_type?TT_MEDIUM:TT_HIGH;
         *(volatile UBYTE *) TT_SHIFTER = rez;
     }
     else
@@ -557,7 +569,7 @@ void screen_init_mode(void)
         vsync();
 #endif
 
-        rez = monitor_type?ST_LOW:ST_HIGH;
+        sshiftmod = rez = monitor_type?ST_LOW:ST_HIGH;
         *(volatile UBYTE *) ST_SHIFTER = rez;
 
 #if CONF_WITH_STE_SHIFTER
@@ -570,7 +582,7 @@ void screen_init_mode(void)
     }
 
 #if CONF_WITH_VIDEL
-    if (rez == FALCON_REZ) {    /* detected a Falcon */
+    if (has_videl) {        /* detected a Falcon */
         sync_mode = (boot_resolution&VIDEL_PAL)?0x02:0x00;
     }
     else
@@ -597,13 +609,16 @@ void screen_init_mode(void)
 #else
     initialise_palette_registers(rez,0);
 #endif
-    sshiftmod = rez;
 
 #endif /* CONF_WITH_ATARI_VIDEO */
     MAYBE_UNUSED(get_default_palmode);
 
 #ifdef MACHINE_AMIGA
     amiga_screen_init();
+#endif
+
+#ifdef MACHINE_LISA
+    lisa_screen_init();
 #endif
 
     rez_was_hacked = FALSE; /* initial assumption */
@@ -717,6 +732,8 @@ ULONG initial_vram_size(void)
 {
 #ifdef MACHINE_AMIGA
     return amiga_initial_vram_size();
+#elif defined(MACHINE_LISA)
+    return 32*1024UL;
 #else
     ULONG vram_size;
 
@@ -771,6 +788,10 @@ void screen_get_current_mode_info(UWORD *planes, UWORD *hz_rez, UWORD *vt_rez)
 
 #ifdef MACHINE_AMIGA
     amiga_get_current_mode_info(planes, hz_rez, vt_rez);
+#elif defined(MACHINE_LISA)
+    *planes = 1;
+    *hz_rez = 720;
+    *vt_rez = 364;
 #else
     atari_get_current_mode_info(planes, hz_rez, vt_rez);
 #endif
@@ -835,6 +856,15 @@ static __inline__ void get_std_pixel_size(WORD *width,WORD *height)
  * are displayed:
  *  - the output from v_arc()/v_circle()/v_pieslice()
  *  - the size of gl_wbox in pixels
+ *
+ * we used to base the pixel sizes for ST(e) systems on exact screen
+ * width and height values.  however, this does not work for enhanced
+ * screens, such as Hatari's 'extended VDI screen' or add-on hardware.
+ *
+ * we now use some heuristics in the hope that this will cover the most
+ * common situations.  unfortunately we cannot set the sizes based on
+ * the value from getrez(), since this may be inaccurate for non-standard
+ * hardware.
  */
 void get_pixel_size(WORD *width,WORD *height)
 {
@@ -846,10 +876,10 @@ void get_pixel_size(WORD *width,WORD *height)
     else
     {
         /* ST TOS has its own set of magic numbers */
-        if (V_REZ_VT == 400)        /* ST high */
-            *width = 372;
-        else if (V_REZ_HZ == 640)   /* ST medium */
+        if (5 * V_REZ_HZ >= 12 * V_REZ_VT)  /* includes ST medium */
             *width = 169;
+        else if (V_REZ_HZ >= 480)   /* ST high */
+            *width = 372;
         else *width = 338;          /* ST low */
         *height = 372;
     }
@@ -861,6 +891,13 @@ void get_pixel_size(WORD *width,WORD *height)
 static const UBYTE *atari_physbase(void)
 {
     ULONG addr;
+
+#if CONF_WITH_NOVA
+    if (HAS_NOVA && rez_was_hacked) {
+        /* Nova/Vofa present and in use? Return its screen memory */
+        return get_novamembase();
+    }
+#endif
 
     addr = *(volatile UBYTE *) VIDEOBASE_ADDR_HI;
     addr <<= 8;
@@ -931,13 +968,8 @@ static void atari_setrez(WORD rez, WORD videlmode)
     }
 #if CONF_WITH_VIDEL
     else if (has_videl) {
-        if (rez == FALCON_REZ) {
-            vsetmode(videlmode);
-            sshiftmod = rez;
-        } else if (rez < 3) {   /* ST compatible resolution */
-            *(volatile UWORD *)SPSHIFT = 0;
-            *(volatile UBYTE *)ST_SHIFTER = sshiftmod = rez;
-        }
+        if ((rez >= 0) && (rez <= 3))
+            videl_setrez(rez, videlmode);   /* sets 'sshiftmod' */
     }
 #endif
 #if CONF_WITH_TT_SHIFTER
@@ -982,6 +1014,8 @@ const UBYTE *physbase(void)
 {
 #ifdef MACHINE_AMIGA
     return amiga_physbase();
+#elif defined(MACHINE_LISA)
+    return lisa_physbase();
 #elif CONF_WITH_ATARI_VIDEO
     return atari_physbase();
 #else
@@ -998,6 +1032,8 @@ static void setphys(const UBYTE *addr)
 
 #ifdef MACHINE_AMIGA
     amiga_setphys(addr);
+#elif defined(MACHINE_LISA)
+    lisa_setphys(addr);
 #elif CONF_WITH_ATARI_VIDEO
     atari_setphys(addr);
 #endif
@@ -1023,37 +1059,31 @@ WORD getrez(void)
  * setscreen(): implement the Setscreen() xbios call
  *
  * implementation details:
- *  . sets the logical screen address, iff logLoc >= 0
- *  . sets the physical screen address, iff physLoc >= 0
+ *  . sets the logical screen address, iff logLoc > 0
+ *  . sets the physical screen address, iff physLoc > 0
  *  . sets the screen resolution iff 0 <= rez <= 7
  *      if a VIDEL is present and rez==3, then the video mode is
  *      set by a call to vsetmode with 'videlmode' as the argument
- *
- * in addition, EmuTOS implements the following extensions iff
- * logLoc<0 and physLoc<0 and the 0x8000 bit is set in rez (TOS will
- * ignore these since it ignores negative values of 'rez'):
- *  . if the 0x4000 bit is set in rez, the palette registers are
- *    initialised according to 'rez' (bits 2-0) and 'videlmode'
  */
 void setscreen(UBYTE *logLoc, const UBYTE *physLoc, WORD rez, WORD videlmode)
 {
-    /* handle EmuCON extensions */
-    if (((LONG)logLoc < 0) && ((LONG)physLoc < 0) && (rez & 0x8000)) {
-        /* Don't allow any changes when Line A variables were 'hacked'. */
-        if (rez_was_hacked) {
-            return;
-        }
-        if (rez & 0x4000) {
-            initialise_palette_registers(rez&0x0007, videlmode);
-        }
-        return;
+#if CONF_WITH_VIDEL
+    /*
+     * fixup videl mode if applicable (this is where we could test
+     * for NULL values in logLoc & physLoc, allocate new memory, &
+     * update logLoc/physLoc)
+     */
+    if (has_videl) {
+        if ((rez == FALCON_REZ) && (videlmode != -1))
+            videlmode = vfixmode(videlmode);
     }
+#endif
 
-    if ((LONG)logLoc >= 0) {
+    if ((LONG)logLoc > 0) {
         v_bas_ad = logLoc;
         KDEBUG(("v_bas_ad = %p\n", v_bas_ad));
     }
-    if ((LONG)physLoc >= 0) {
+    if ((LONG)physLoc > 0) {
         setphys(physLoc);
     }
 

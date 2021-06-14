@@ -6,7 +6,7 @@
  * Defines that should *not* be overridden should appear in sysconf.h
  * (or deskconf.h if they apply to EmuDesk).
  *
- * Copyright (C) 2001-2020 The EmuTOS development team
+ * Copyright (C) 2001-2021 The EmuTOS development team
  *
  * Authors:
  *  MAD     Martin Doering
@@ -33,7 +33,7 @@
 /*
  * Determine if this EmuTOS is built for ROM or RAM
  */
-#if defined(TARGET_PRG) || defined(TARGET_FLOPPY) || defined(TARGET_AMIGA_FLOPPY)
+#if defined(TARGET_PRG) || defined(TARGET_FLOPPY) || defined(TARGET_AMIGA_FLOPPY) || defined(TARGET_LISA_FLOPPY)
 #  define EMUTOS_LIVES_IN_RAM 1
 # else
 #  define EMUTOS_LIVES_IN_RAM 0
@@ -182,6 +182,9 @@
 # ifndef CONF_WITH_ICDRTC
 #  define CONF_WITH_ICDRTC 0    /* useless on FireBee as it has NVRAM clock */
 # endif
+# ifndef CONF_WITH_ULTRASATAN_CLOCK
+#  define CONF_WITH_ULTRASATAN_CLOCK 0    /* useless on FireBee as it has NVRAM clock */
+# endif
 # ifndef CONF_WITH_MONSTER
 #  define CONF_WITH_MONSTER 0
 # endif
@@ -283,8 +286,20 @@
 # ifndef CONF_WITH_ICDRTC
 #  define CONF_WITH_ICDRTC 0
 # endif
+# ifndef CONF_WITH_ULTRASATAN_CLOCK
+#  define CONF_WITH_ULTRASATAN_CLOCK 0
+# endif
 # ifndef CONF_WITH_XHDI
 #  define CONF_WITH_XHDI 0
+# endif
+# ifndef CONF_WITH_COLOUR_ICONS
+#  define CONF_WITH_COLOUR_ICONS 0
+# endif
+# ifndef CONF_WITH_GRAF_MOUSE_EXTENSION
+#  define CONF_WITH_GRAF_MOUSE_EXTENSION 0
+# endif
+# ifndef CONF_WITH_WINDOW_COLOURS
+#  define CONF_WITH_WINDOW_COLOURS 0
 # endif
 # ifndef CONF_WITH_WINDOW_ICONS
 #  define CONF_WITH_WINDOW_ICONS 0
@@ -443,6 +458,9 @@
 # ifndef CONF_WITH_ICDRTC
 #  define CONF_WITH_ICDRTC 0
 # endif
+# ifndef CONF_WITH_ULTRASATAN_CLOCK
+#  define CONF_WITH_ULTRASATAN_CLOCK 0
+# endif
 # ifndef CONF_WITH_SHUTDOWN
 #  define CONF_WITH_SHUTDOWN 0
 # endif
@@ -487,6 +505,35 @@
 #endif
 
 /*
+ * Defaults for the Apple Lisa floppy target
+ */
+#ifdef TARGET_LISA_FLOPPY
+# define MACHINE_LISA
+#endif
+
+/*
+ * Defaults for the Apple Lisa machine
+ */
+#ifdef MACHINE_LISA
+# ifndef CONF_ATARI_HARDWARE
+#  define CONF_ATARI_HARDWARE 0
+# endif
+# ifndef CONF_WITH_ADVANCED_CPU
+#  define CONF_WITH_ADVANCED_CPU 0
+# endif
+# ifndef CONF_WITH_APOLLO_68080
+#  define CONF_WITH_APOLLO_68080 0
+# endif
+# ifndef CONF_WITH_CACHE_CONTROL
+#  define CONF_WITH_CACHE_CONTROL 0
+# endif
+# ifndef USE_STOP_INSN_TO_FREE_HOST_CPU
+   /* This makes LisaEm timings completely inaccurate, so disable it */
+#  define USE_STOP_INSN_TO_FREE_HOST_CPU 0
+# endif
+#endif
+
+/*
  * Defaults for the M548x machine
  */
 #ifdef MACHINE_M548X
@@ -501,6 +548,9 @@
 # endif
 # ifndef CONF_TTRAM_SIZE
 #  define CONF_TTRAM_SIZE 48UL*1024*1024
+# endif
+# ifndef CONF_SERIAL_CONSOLE
+#  define CONF_SERIAL_CONSOLE 1
 # endif
 # ifndef CONF_WITH_IDE
 #  define CONF_WITH_IDE 1
@@ -967,6 +1017,15 @@
 # endif
 
 /*
+ * Set CONF_WITH_ULTRASATAN_CLOCK to 1 to enable ULTRASATAN clock support
+ * Based on CONF_WITH_ACSI value
+ */
+#ifndef CONF_WITH_ULTRASATAN_CLOCK
+# define CONF_WITH_ULTRASATAN_CLOCK CONF_WITH_ACSI
+#endif
+
+
+/*
  * Set CONF_WITH_DMASOUND to 1 to enable support for STe/TT/Falcon DMA sound
  */
 #ifndef CONF_WITH_DMASOUND
@@ -1095,19 +1154,6 @@
 #endif
 
 /*
- * Define the AES version here. Valid values include:
- *      0x0120      AES 1.20, used by TOS v1.02
- *      0x0140      AES 1.40, used by TOS v1.04 & v1.62
- *      0x0320      AES 3.20, used by TOS v2.06 & v3.06
- *      0x0340      AES 3.40, used by TOS v4.04
- * Do not change this arbitrarily, as each value implies the presence or
- * absence of certain AES functions ...
- */
-#ifndef AES_VERSION
-# define AES_VERSION 0x0140
-#endif
-
-/*
  * With this switch you can control if some functions should be used as
  * static-inlines. This is generally a good idea if your compiler supports
  * this (the current GCC does). It will shrink the size of the ROM since
@@ -1229,6 +1275,14 @@
 #endif
 
 /*
+ * Set CONF_WITH_COLOUR_ICONS to 1 to enable support for colour icons,
+ * as in Atari TOS 4
+ */
+#ifndef CONF_WITH_COLOUR_ICONS
+# define CONF_WITH_COLOUR_ICONS 1
+#endif
+
+/*
  * Set CONF_WITH_EXTENDED_MOUSE to 1 to enable extended mouse support.
  * This includes new Eiffel scancodes for mouse buttons 3, 4, 5, and
  * the wheel.
@@ -1288,6 +1342,36 @@
 #endif
 
 /*
+ * The VDI functions v_fillarea(), v_pline(), v_pmarker() can handle
+ * up to MAX_VERTICES coordinates (MAX_VERTICES/2 points).
+ * TOS2 allows 512 vertices, TOS3/TOS4 allow 1024.
+ */
+#ifndef MAX_VERTICES
+# if defined(TARGET_1024) || defined(TARGET_512) || defined(TARGET_PRG) || defined(MACHINE_FIREBEE) || defined(MACHINE_M548X) || defined(MACHINE_ARANYM)
+#  define MAX_VERTICES   1024
+# else
+#  define MAX_VERTICES   512
+# endif
+#endif
+
+/*
+ * Set CONF_WITH_GRAF_MOUSE_EXTENSION to 1 to include AES support for
+ * graf_mouse() modes M_SAVE, M_RESTORE, M_PREVIOUS.
+ */
+#ifndef CONF_WITH_GRAF_MOUSE_EXTENSION
+# define CONF_WITH_GRAF_MOUSE_EXTENSION 1
+#endif
+
+/*
+ * Set CONF_WITH_WINDOW_COLOURS to 1 to include AES support for managing
+ * window element colours.  Management is via modes WF_COLOR/WF_DCOLOR
+ * in wind_get()/wind_set().
+ */
+#ifndef CONF_WITH_WINDOW_COLOURS
+# define CONF_WITH_WINDOW_COLOURS 1
+#endif
+
+/*
  * Set CONF_WITH_XBIOS_SOUND to 1 to enable support for the XBIOS sound
  * extension.  This extension provides (some of) the Falcon XBIOS sound
  * functions when running on STe- or TT-compatible hardware.  You must
@@ -1331,14 +1415,23 @@
 /*
  * Set CONF_SERIAL_CONSOLE to 1 in order to:
  * - send console output to the serial port, in addition to the screen
- * - use exclusively the serial port for console input.
+ * - use exclusively the serial port input for console input.
  */
 #ifndef CONF_SERIAL_CONSOLE
-# if !CONF_WITH_ATARI_VIDEO && !defined(MACHINE_AMIGA)
-#  define CONF_SERIAL_CONSOLE 1
-# else
-#  define CONF_SERIAL_CONSOLE 0
-# endif
+# define CONF_SERIAL_CONSOLE 0
+#endif
+
+/*
+ * Set CONF_SERIAL_CONSOLE_POLLING_MODE to 1 if ikbdiorec is not filled
+ * on serial interrupt when CONF_SERIAL_CONSOLE is enabled. This is handy
+ * in early stages when porting EmuTOS to new hardware, as this works even if
+ * bconstat1()/bconin1() are implemented by polling. Interrupts are generally
+ * more complicated to set up.
+ * Pros: Polling mode is good enough for EmuTOS itself.
+ * Cons: FreeMiNT's advanced keyboard processor doesn't support polling mode.
+ */
+#ifndef CONF_SERIAL_CONSOLE_POLLING_MODE
+# define CONF_SERIAL_CONSOLE_POLLING_MODE 0
 #endif
 
 /*
@@ -1360,6 +1453,32 @@
  */
 #ifndef CONF_SERIAL_IKBD
 # define CONF_SERIAL_IKBD 0
+#endif
+
+/* 
+ * Set the default baud rate for serial ports.
+ */
+#ifndef DEFAULT_BAUDRATE
+# define DEFAULT_BAUDRATE B9600
+#endif
+
+/*
+ * Define the AES version here. This must be done at the end of the
+ * "Software Section", since the value depends on features that are set
+ * within that section. Valid values include:
+ *      0x0120      AES 1.20, used by TOS v1.02
+ *      0x0140      AES 1.40, used by TOS v1.04 & v1.62
+ *      0x0320      AES 3.20, used by TOS v2.06 & v3.06
+ *      0x0340      AES 3.40, used by TOS v4.04
+ * Do not change this arbitrarily, as each value implies the presence or
+ * absence of certain AES functions ...
+ */
+#ifndef AES_VERSION
+# if CONF_WITH_WINDOW_COLOURS && CONF_WITH_GRAF_MOUSE_EXTENSION
+#  define AES_VERSION 0x0320
+# else
+#  define AES_VERSION 0x0140
+# endif
 #endif
 
 
@@ -1641,7 +1760,7 @@
  * It tries to power off the machine, if possible.
  */
 #ifndef CONF_WITH_SHUTDOWN
-# if DETECT_NATIVE_FEATURES || defined(MACHINE_FIREBEE) || defined(MACHINE_AMIGA)
+# if DETECT_NATIVE_FEATURES || defined(MACHINE_FIREBEE) || defined(MACHINE_AMIGA) || defined(MACHINE_LISA)
 #  define CONF_WITH_SHUTDOWN 1
 # else
 #  define CONF_WITH_SHUTDOWN 0
@@ -1793,9 +1912,18 @@
 # endif
 #endif
 
+#if !CONF_SERIAL_CONSOLE
+# if CONF_SERIAL_CONSOLE_POLLING_MODE
+#  error CONF_SERIAL_CONSOLE_POLLING_MODE requires CONF_SERIAL_CONSOLE.
+# endif
+#endif
+
 #if !CONF_WITH_ACSI
 # if CONF_WITH_ICDRTC
 #  error CONF_WITH_ICDRTC requires CONF_WITH_ACSI.
+# endif
+# if CONF_WITH_ULTRASATAN_CLOCK
+#  error CONF_WITH_ULTRASATAN_CLOCK requires CONF_WITH_ACSI.
 # endif
 #endif
 

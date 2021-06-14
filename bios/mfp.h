@@ -2,7 +2,7 @@
  *  mfp.h - header file for MFP defines
  *
  * Copyright (C) 2001 Martin Doering
- * Copyright (C) 2001-2020 The EmuTOS development team
+ * Copyright (C) 2001-2021 The EmuTOS development team
  *
  * Authors:
  *  MAD     Martin Doering
@@ -14,9 +14,6 @@
 
 #ifndef MFP_H
 #define MFP_H
-
-#define CLOCKS_PER_SEC  200UL
-
 
 #if CONF_WITH_MFP || CONF_WITH_TT_MFP
 
@@ -81,6 +78,7 @@ typedef struct
 #define TT_MFP_BASE     ((MFP *)(0xfffffa80L))
 
 void tt_mfp_init(void);
+void tt_mfpint(WORD num, LONG vector);
 
 #endif
 

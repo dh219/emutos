@@ -456,7 +456,8 @@ static void men_list(OBJECT *mlist, const UBYTE *dlist, WORD enable)
  */
 static void men_update(void)
 {
-    WORD item, napp, ndesk, nsel, ntrash, nwin, isapp;
+    WORD item, napp, ndesk, nsel, ntrash, nwin;
+    BOOL isapp;
     ANODE *appl;
     OBJECT *tree = desk_rs_trees[ADMENU];
     OBJECT *obj;
@@ -480,32 +481,44 @@ static void men_update(void)
     /*
      * process all selected icons, counting types of icons: applications,
      * desktop icons, trash/printer icons, and selected icons.
+     *
+     * we handle the desktop "window" and real windows separately, since
+     * in a real window there can be selected items that are not visible.
      */
     napp = ndesk = nsel = ntrash = 0;
-    for (item = 0; (item=win_isel(G.g_screen, G.g_croot, item)) != 0; nsel++)
+
+    if (G.g_cwin == DESKWH)
     {
-        appl = i_find(G.g_cwin, item, NULL, &isapp);
-        if (!appl)
-            continue;
-        if (isapp)          /* count applications selected */
-            napp++;
-        switch(appl->a_type)
+        for (item = 0; (item=win_isel(G.g_screen, G.g_croot, item)) != 0; nsel++)
         {
+            appl = i_find(G.g_cwin, item, NULL, &isapp);
+            if (!appl)
+                continue;
+            if (isapp)          /* count applications selected */
+                napp++;
+            switch(appl->a_type)
+            {
 #if CONF_WITH_PRINTER_ICON
-        case AT_ISPRNT:                 /* Printer */
+            case AT_ISPRNT:                 /* Printer */
 #endif
-        case AT_ISTRSH:                 /* Trash */
-            ntrash++;
-            FALLTHROUGH;
-        case AT_ISDISK:
-            ndesk++;        /* count desktop icons selected */
-            break;
-        }
+            case AT_ISTRSH:                 /* Trash */
+                ntrash++;
+                FALLTHROUGH;
+            case AT_ISDISK:
+                ndesk++;        /* count desktop icons selected */
+                break;
+            }
 #if CONF_WITH_DESKTOP_SHORTCUTS
-        /* allow "Remove icon" for icons on the desktop */
-        if (appl->a_flags & AF_ISDESK)
-            ndesk++;
+            /* allow "Remove icon" for icons on the desktop */
+            if (appl->a_flags & AF_ISDESK)
+                ndesk++;
 #endif
+        }
+    }
+    else    /* real window */
+    {
+        WNODE *pw = win_find(G.g_cwin);
+        pn_count(pw, &nsel, &napp);
     }
     nwin = win_count();     /* number of open windows */
 
@@ -644,8 +657,8 @@ static WORD do_filemenu(WORD item)
     switch(item)
     {
     case OPENITEM:
-        if (curr)
-            done = do_open(curr);
+        if (pw || curr)
+            done = do_open(pw, curr);
         break;
     case SHOWITEM:
         if (curr)
@@ -668,8 +681,8 @@ static WORD do_filemenu(WORD item)
 
 #if CONF_WITH_SEARCH
     case SRCHITEM:
-        if (curr || pw)
-            fun_search(curr, pw);
+        if (pw || curr)
+            fun_search(pw, curr);
         if (curr)
             desk_clear(DESKWH);     /* deselect desktop icon(s) */
         break;
@@ -711,8 +724,8 @@ static WORD do_filemenu(WORD item)
         break;
 #endif
     case DELTITEM:
-        if (curr)
-            fun_del(curr);
+        if (pw || curr)
+            fun_del(pw, curr);
         break;
 
 #if CONF_WITH_FORMAT
@@ -725,6 +738,18 @@ static WORD do_filemenu(WORD item)
     case CLIITEM:                         /* Start EmuCON */
         G.g_work[1] = '\0';
         done = pro_run(FALSE, DEF_CONSOLE, G.g_work, -1, -1);
+        if (done && pw)
+        {
+            /*
+             * set default directory according to path in topped window
+             */
+            char *p;
+
+            strcpy(G.g_work, pw->w_pnode.p_spec);
+            p = filename_start(G.g_work);
+            *p = '\0';
+            shel_wdef("", G.g_work);
+        }
         break;
 #endif
 
@@ -812,11 +837,11 @@ static WORD do_optnmenu(WORD item)
         }
         break;
     case IAPPITEM:
-        curr = 0;
-        while( (curr = win_isel(G.g_screen, G.g_croot, curr)) )
+        rebld = ins_app();
+        if (rebld < 0)
         {
-            if (ins_app(curr) < 0)  /* user cancelled */
-                break;
+            win_bdall();    /* to refresh f_pa/f_isap in the FNODEs */
+            win_shwall();
         }
         break;
     case IICNITEM:
@@ -1006,7 +1031,7 @@ static void kbd_arrow(WORD type)
     WNODE *pw;
 
     wind_get(DESKWH, WF_TOP, &wh, &dummy, &dummy, &dummy);
-    if (!wh)
+    if (wh == DESKWH)
         return;
 
     pw = win_find(wh);
@@ -1058,7 +1083,7 @@ static WORD process_funkey(WORD funkey)
         pfname = filename_start(pa->a_pappl);
         /* copy pathname including trailing backslash */
         strlcpy(pathname,pa->a_pappl,pfname-pa->a_pappl+1);
-        return do_aopen(pa,1,-1,pathname,pfname,NULL);
+        return do_aopen(pa,TRUE,-1,pathname,pfname,NULL);
     }
 
     return -1;
@@ -1335,7 +1360,6 @@ static void cnx_put(void)
     cnxsave->cs_confdel = G.g_cdelepref;
     cnxsave->cs_dblclick = G.g_cdclkpref;
     cnxsave->cs_confovwr = G.g_covwrpref;
-    cnxsave->cs_mnuclick = G.g_cmclkpref;
     cnxsave->cs_timefmt = G.g_ctimeform;
     cnxsave->cs_datefmt = G.g_cdateform;
     cnxsave->cs_blitter = G.g_blitter;
@@ -1397,7 +1421,6 @@ static void cnx_get(void)
     G.g_cdelepref = cnxsave->cs_confdel;
     G.g_covwrpref = cnxsave->cs_confovwr;
     G.g_cdclkpref = cnxsave->cs_dblclick;
-    G.g_cmclkpref = cnxsave->cs_mnuclick;
     G.g_ctimeform = cnxsave->cs_timefmt;
     G.g_cdateform = cnxsave->cs_datefmt;
     G.g_blitter   = cnxsave->cs_blitter;
@@ -1414,7 +1437,6 @@ static void cnx_get(void)
     menu_icheck(desk_rs_trees[ADMENU], FITITEM, G.g_ifit ? 1 : 0);
 #endif
     G.g_cdclkpref = evnt_dclick(G.g_cdclkpref, TRUE);
-    G.g_cmclkpref = menu_click(G.g_cmclkpref, TRUE);
 
     /* DESKTOP v1.2: Remove 2-window limit; and cnx_open() inlined. */
     for (nw = 0; nw < NUM_WNODES; nw++)
@@ -1422,23 +1444,23 @@ static void cnx_get(void)
         pws = &cnxsave->cs_wnode[nw];
 
         /* Check for valid position */
-        if (pws->x_save >= G.g_wdesk)
+        if (pws->x_save >= G.g_desk.g_w)
         {
-            pws->x_save = G.g_wdesk/2;
+            pws->x_save = G.g_desk.g_w/2;
         }
-        if (pws->y_save >= G.g_hdesk)
+        if (pws->y_save >= G.g_desk.g_h)
         {
-            pws->y_save = G.g_hdesk/2;
+            pws->y_save = G.g_desk.g_h/2;
         }
 
         /* Check for valid width + height */
-        if (pws->w_save <= 0 || pws->w_save > G.g_wdesk)
+        if (pws->w_save <= 0 || pws->w_save > G.g_desk.g_w)
         {
-            pws->w_save = G.g_wdesk;
+            pws->w_save = G.g_desk.g_w;
         }
-        if (pws->h_save <= 0 || pws->h_save > G.g_hdesk)
+        if (pws->h_save <= 0 || pws->h_save > G.g_desk.g_h)
         {
-            pws->h_save = G.g_hdesk;
+            pws->h_save = G.g_desk.g_h;
         }
 
         if (pws->pth_save[0])
@@ -1471,7 +1493,7 @@ static void adjust_menu(OBJECT *obj_array)
 
     int i;  /* index in the menu bar */
     int j;  /* index in the array of pull downs */
-    int width = (G.g_wdesk >> 3);   /* screen width in chars */
+    int width = (G.g_desk.g_w >> 3);    /* screen width in chars */
     int m;  /* max width of each set of menu items, needed for separator lines */
     int n, x;
     OBJECT *menu = OBJ(0);
@@ -1884,7 +1906,7 @@ BOOL deskmain(void)
     gl_handle = graf_handle(&gl_wchar, &gl_hchar, &gl_wbox, &gl_hbox);
 
     /* get desktop work area coordinates */
-    wind_get(DESKWH, WF_WXYWH, &G.g_xdesk, &G.g_ydesk, &G.g_wdesk, &G.g_hdesk);
+    wind_get_grect(DESKWH, WF_WXYWH, &G.g_desk);
 
     /* initialize mouse     */
     wind_update(BEG_UPDATE);

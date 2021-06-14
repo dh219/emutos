@@ -202,6 +202,7 @@ static void just_draw(OBJECT *tree, WORD obj, WORD sx, WORD sy)
     TEDINFO edblk;
     BITBLK bi;
     ICONBLK ib;
+    CICON *cicon;
 
     ch = ob_sst(tree, obj, &spec, &state, &obtype, &flags, &t, &th);
 
@@ -215,7 +216,7 @@ static void just_draw(OBJECT *tree, WORD obj, WORD sx, WORD sy)
      * do trivial reject with full extent including outline, shadow,
      * & thickness
      */
-    if (gl_wclip && gl_hclip)
+    if (gl_clip.g_w && gl_clip.g_h)
     {
         rc_copy(&t, &c);
         if (state & OUTLINED)
@@ -319,19 +320,24 @@ static void just_draw(OBJECT *tree, WORD obj, WORD sx, WORD sy)
             break;
         case G_IMAGE:
             bi = *((BITBLK *)spec);
-            gsx_blt((void *)bi.bi_pdata, bi.bi_x, bi.bi_y, bi.bi_wb,
-                    NULL, t.g_x, t.g_y, gl_width/8, bi.bi_wb * 8,
+            gsx_blt((void *)bi.bi_pdata, bi.bi_x, bi.bi_y,
+                    t.g_x, t.g_y, bi.bi_wb * 8,
                     bi.bi_hl, MD_TRANS, bi.bi_color, WHITE);
             break;
         case G_ICON:
+            cicon = NULL;
+#if CONF_WITH_COLOUR_ICONS
+            FALLTHROUGH;
+        case G_CICON:   /* a CICONBLK starts with an ICONBLK */
+            if (obtype == G_CICON)
+                cicon = ((CICONBLK *)spec)->mainlist;
+#endif
             ib = *((ICONBLK *)spec);
             ib.ib_xicon += t.g_x;
             ib.ib_yicon += t.g_y;
             ib.ib_xtext += t.g_x;
             ib.ib_ytext += t.g_y;
-            gr_gicon(state, ib.ib_pmask, ib.ib_pdata, ib.ib_ptext,
-                    ib.ib_char, ib.ib_xchar, ib.ib_ychar,
-                    (GRECT *)&ib.ib_xicon, (GRECT *)&ib.ib_xtext);  /* FIXME: Ugly typecasting */
+            gr_gicon(state, &ib, cicon);
             state &= ~SELECTED;
             break;
         case G_USERDEF:
@@ -692,35 +698,38 @@ void ob_change(OBJECT *tree, WORD obj, UWORD new_state, WORD redraw)
     objptr = tree + obj;
     objptr->ob_state = new_state;
 
-    if (redraw)
+    /* if no redraw, we're done */
+    if (!redraw)
+        return;
+
+    ob_offset(tree, obj, &t.g_x, &t.g_y);
+
+    gsx_moff();
+
+    if (th < 0)
+        th = 0;
+
+    switch(obtype)
     {
-        ob_offset(tree, obj, &t.g_x, &t.g_y);
-
-        gsx_moff();
-
-        th = (th < 0) ? 0 : th;
-
-        if (obtype == G_USERDEF)
+    case G_USERDEF: /* just call the user's drawing routine */
+        ob_user(tree, obj, &t, spec, curr_state, new_state);
+        redraw = FALSE;
+        break;
+    case G_ICON:    /* never use XOR for icons */
+        break;
+    default:        /* others: use XOR iff SELECTED state has changed */
+        if ((new_state ^ curr_state) & SELECTED)
         {
-            ob_user(tree, obj, &t, spec, curr_state, new_state);
+            bb_fill(MD_XOR, FIS_SOLID, IP_SOLID, t.g_x+th, t.g_y+th,
+                    t.g_w-(2*th), t.g_h-(2*th));
             redraw = FALSE;
         }
-        else
-        {
-            if ((obtype != G_ICON) &&
-               ((new_state ^ curr_state) & SELECTED) )
-            {
-                bb_fill(MD_XOR, FIS_SOLID, IP_SOLID, t.g_x+th, t.g_y+th,
-                        t.g_w-(2*th), t.g_h-(2*th));
-                redraw = FALSE;
-            }
-        }
-
-        if (redraw)
-            just_draw(tree, obj, t.g_x, t.g_y);
-
-        gsx_mon();
     }
+
+    if (redraw)
+        just_draw(tree, obj, t.g_x, t.g_y);
+
+    gsx_mon();
 }
 
 

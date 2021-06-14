@@ -26,11 +26,17 @@
 #define VDI_PHYS_HANDLE     FIRST_VDI_HANDLE
 
 /*
+ * ptr to current mouse cursor save area, based on v_planes
+ */
+MCS *mcs_ptr;
+
+
+/*
  * entry n in the following array points to the Vwk corresponding to
  * VDI handle n.  entry 0 is unused.
  */
 static Vwk *vwk_ptr[NUM_VDI_HANDLES+1];
-static Vwk phys_work;          /* attribute area for physical workstation */
+extern Vwk phys_work;       /* attribute area for physical workstation */
 
 
 /*
@@ -113,7 +119,7 @@ static const WORD DEV_TAB_rom[45] = {
     0,                          /* 2    device precision 0=exact,1=not exact */
     372,                        /* 3    width of pixel           */
     372,                        /* 4    height of pixel          */
-    1,                          /* 5    character sizes          */
+    3,                          /* 5    number of text font heights */
     MAX_LINE_STYLE,             /* 6    linestyles               */
     0,                          /* 7    linewidth                */
     6,                          /* 8    marker types             */
@@ -163,6 +169,36 @@ Vwk * get_vwk_by_handle(WORD handle)
         return NULL;
 
     return vwk_ptr[handle];
+}
+
+
+
+/*
+ * update resolution-dependent VDI/lineA variables
+ *
+ * this function assumes that v_planes, V_REZ_HZ, V_REZ_VT are already set
+ */
+void update_rez_dependent(void)
+{
+    BYTES_LIN = v_lin_wr = V_REZ_HZ / 8 * v_planes;
+
+#if EXTENDED_PALETTE
+    mcs_ptr = (v_planes <= 4) ? &mouse_cursor_save : &ext_mouse_cursor_save;
+#else
+    mcs_ptr = &mouse_cursor_save;
+#endif
+
+    DEV_TAB[0] = V_REZ_HZ - 1;
+    DEV_TAB[1] = V_REZ_VT - 1;
+    get_pixel_size(&DEV_TAB[3],&DEV_TAB[4]);
+    DEV_TAB[13] = (v_planes<8) ? (1 << v_planes) : 256;
+    DEV_TAB[35] = (v_planes==1) ? 0 : 1;
+    DEV_TAB[39] = get_palette();    /* some versions of COLOR.CPX care about this */
+
+    INQ_TAB[4] = v_planes;
+    if ((v_planes == 16) || (get_monitor_type() == MON_MONO))
+        INQ_TAB[5] = 0;
+    else INQ_TAB[5] = 1;
 }
 
 
@@ -293,9 +329,6 @@ static void init_wk(Vwk * vwk)
     vwk->multifill = 0;
     vwk->ud_ls = LINE_STYLE[0];
 
-    CONTRL[2] = 6;
-    CONTRL[4] = 45;
-
     pointer = INTOUT;
     src_ptr = DEV_TAB;
     for (l = 0; l < 45; l++)
@@ -306,6 +339,7 @@ static void init_wk(Vwk * vwk)
     for (l = 0; l < 12; l++)
         *pointer++ = *src_ptr++;
 
+#if HAVE_BEZIER
     /* setup initial bezier values */
     vwk->bez_qual = 7;
 #if 0
@@ -315,10 +349,34 @@ static void init_wk(Vwk * vwk)
     vwk->bezier.depth.min = 2;
     vwk->bezier.depth.max = 7;
 #endif
+#endif
 
     vwk->next_work = NULL;  /* neatness */
 
     flip_y = 1;
+}
+
+
+
+/*
+ * build a chain of Vwks
+ *
+ * this links all of the currently allocated Vwks together, as in
+ * Atari TOS.  some programs may depend on this.
+ */
+static void build_vwk_chain(void)
+{
+    Vwk *prev, **vwk;
+    WORD handle;
+
+    prev = &phys_work;
+    for (handle = VDI_PHYS_HANDLE+1, vwk = vwk_ptr+handle; handle <= LAST_VDI_HANDLE; handle++, vwk++) {
+        if (*vwk) {
+            prev->next_work = *vwk;
+            prev = *vwk;
+        }
+    }
+    prev->next_work = NULL;
 }
 
 
@@ -357,6 +415,7 @@ void vdi_v_opnvwk(Vwk * vwk)
     vwk_ptr[handle] = vwk;
     vwk->handle = CONTRL[6] = handle;
     init_wk(vwk);
+    build_vwk_chain();
     CUR_WORK = vwk;
 }
 
@@ -372,6 +431,8 @@ void vdi_v_clsvwk(Vwk * vwk)
         return;
 
     vwk_ptr[handle] = NULL;         /* close it */
+
+    build_vwk_chain();              /* rebuild chain */
 
     /*
      * When we close a virtual workstation, Atari TOS and previous versions
@@ -425,27 +486,8 @@ void vdi_v_opnwk(Vwk * vwk)
         INQ_TAB[i] = INQ_TAB_rom[i];
     }
 
-    /* Copy data from line-A variables */
-    xres = V_REZ_HZ - 1;        /* xres/yres are DEV_TAB[0]/[1] */
-    yres = V_REZ_VT - 1;
-    INQ_TAB[4] = v_planes;
-
-    /* get pixel sizes for use by routines in vdi_gdp.c & vdi_line.c */
-    get_pixel_size(&xsize,&ysize);  /* xsize/ysize are DEV_TAB[3]/[4] */
-
-    /* Indicate whether LUT is supported */
-    if ((INQ_TAB[4] == 16) || (get_monitor_type() == MON_MONO))
-        INQ_TAB[5] = 0;
-    else INQ_TAB[5] = 1;
-
-    /* Calculate colors allowed at one time */
-    if (INQ_TAB[4] < 8)
-        numcolors = 2<<(v_planes-1);/* numcolors is DEV_TAB[13] */
-    else
-        numcolors = 256;
-
-    /* get palette (COLOR.CPX from the MegaSTe language disk cares about this) */
-    DEV_TAB[39] = get_palette();
+    /* update resolution-dependent values */
+    update_rez_dependent();
 
     /* initialize the vwk pointer array */
     vwk = &phys_work;

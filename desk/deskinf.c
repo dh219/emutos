@@ -572,7 +572,7 @@ WORD inf_file_folder(char *ppath, FNODE *pf)
         obj = tree + FFOK;
         obj->ob_state &= ~SELECTED;
         inf_show(tree, ROOT);
-        ret = inf_what(tree, FFSKIP, FFCNCL);
+        ret = inf_what(tree, FFSKIP);
         if (ret >= 0)       /* skip or cancel */
             return ret;
 
@@ -689,7 +689,7 @@ WORD inf_disk(char dr_id)
     inf_numset(tree, DIAVAIL, avail);
 
     inf_show(tree, ROOT);
-    return inf_what(tree, DIOK, DICNCL);
+    return inf_what(tree, DIOK);
 }
 
 
@@ -721,7 +721,6 @@ static WORD inf_which(OBJECT *tree, WORD baseobj, WORD numobj)
 WORD inf_pref(void)
 {
     OBJECT *tree1 = desk_rs_trees[ADSETPRE];
-    OBJECT *tree2 = desk_rs_trees[ADSETPR2];
     WORD oldtime, olddate;
     WORD button;
 
@@ -731,7 +730,6 @@ WORD inf_pref(void)
 
     /* first, deselect all objects */
     deselect_all(tree1);
-    deselect_all(tree2);
 
     /* select buttons corresponding to current state */
     if (G.g_cdelepref)
@@ -751,52 +749,37 @@ WORD inf_pref(void)
 
     /* select buttons corresponding to current state of more preferences */
     G.g_cdclkpref = evnt_dclick(0, FALSE);
-    tree2[SPDC1+G.g_cdclkpref].ob_state |= SELECTED;
-
-    if (G.g_cmclkpref)
-        tree2[SPMNCLKY].ob_state |= SELECTED;
-    else
-        tree2[SPMNCLKN].ob_state |= SELECTED;
+    tree1[SPDC1+G.g_cdclkpref].ob_state |= SELECTED;
 
     switch(G.g_ctimeform)
     {
     case TIMEFORM_12H:
-        tree2[SPTF12HR].ob_state |= SELECTED;
+        tree1[SPTF12HR].ob_state |= SELECTED;
         break;
     case TIMEFORM_24H:
-        tree2[SPTF24HR].ob_state |= SELECTED;
+        tree1[SPTF24HR].ob_state |= SELECTED;
         break;
     default:
-        tree2[SPTF_DEF].ob_state |= SELECTED;
+        tree1[SPTF_DEF].ob_state |= SELECTED;
         break;
     }
 
     switch(G.g_cdateform)
     {
     case DATEFORM_MDY:
-        tree2[SPDFMMDD].ob_state |= SELECTED;
+        tree1[SPDFMMDD].ob_state |= SELECTED;
         break;
     case DATEFORM_DMY:
-        tree2[SPDFDDMM].ob_state |= SELECTED;
+        tree1[SPDFDDMM].ob_state |= SELECTED;
         break;
     default:
-        tree2[SPDF_DEF].ob_state |= SELECTED;
+        tree1[SPDF_DEF].ob_state |= SELECTED;
         break;
     }
 
     /* allow user to select preferences */
     inf_show(tree1, ROOT);
-    button = inf_what(tree1,SPOK,SPCNCL);
-
-    /*
-     * handle dialog 2 if necessary
-     */
-    if (button < 0)         /* user selected More */
-    {
-        /* allow user to select preferences */
-        inf_show(tree2, ROOT);
-        button = inf_what(tree2, SPOK2, SPCNCL2);
-    }
+    button = inf_what(tree1, SPOK);
 
     if (button)
     {
@@ -804,24 +787,22 @@ WORD inf_pref(void)
         G.g_ccopypref = inf_which(tree1, SPCCYES, 2);
         G.g_covwrpref = inf_which(tree1, SPCOWYES, 2);
 
-        G.g_cdclkpref = inf_gindex(tree2, SPDC1, 5);
+        G.g_cdclkpref = inf_gindex(tree1, SPDC1, 5);
         G.g_cdclkpref = evnt_dclick(G.g_cdclkpref, TRUE);
-        G.g_cmclkpref = inf_which(tree2, SPMNCLKY, 2);
-        G.g_cmclkpref = menu_click(G.g_cmclkpref, TRUE);
 
         /*
          * the following assumes that the buttons are in the
          * left-to-right order: default, 12hour, 24hour
          */
         oldtime = G.g_ctimeform;
-        G.g_ctimeform = inf_which(tree2, SPTF_DEF, 3);
+        G.g_ctimeform = inf_which(tree1, SPTF_DEF, 3);
 
         /*
          * the following assumes that the buttons are in the
          * left-to-right order: default, mmddyy, ddmmyy
          */
         olddate = G.g_cdateform;
-        G.g_cdateform = inf_which(tree2, SPDF_DEF, 3);
+        G.g_cdateform = inf_which(tree1, SPDF_DEF, 3);
 
         /*
          * if the current view is as text, and the date or time
@@ -923,7 +904,7 @@ BOOL inf_backgrounds(void)
             set_aes_background(curdesk & 0xff);
             G.g_patcol[index].desktop = curdesk & 0xff;
             G.g_screen[DROOT].ob_spec = curdesk;
-            do_wredraw(DESKWH, (GRECT *)&G.g_xdesk);
+            do_wredraw(DESKWH, &G.g_desk);
         }
 
         /* check for window background change */
@@ -1280,7 +1261,7 @@ WORD opn_appl(char *papname, char *ptail)
     inf_show(tree, APPLPARM);
 
     /* now find out what happened */
-    if ( inf_what(tree, APPLOK, APPLCNCL) )
+    if (inf_what(tree, APPLOK))
     {
         inf_sget(tree, APPLPARM, ptail);
         return TRUE;

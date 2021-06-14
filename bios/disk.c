@@ -21,12 +21,12 @@
 #include "processor.h"
 #include "natfeat.h"
 #include "tosvars.h"
-#include "mfp.h"
 #include "ide.h"
 #include "acsi.h"
 #include "scsi.h"
 #include "sd.h"
 #include "../bdos/bdosstub.h"
+#include "string.h"
 
 /*==== Defines ============================================================*/
 
@@ -50,6 +50,11 @@ typedef struct {
 /*==== Global variables ===================================================*/
 
 UNIT units[UNITSNUM];
+
+#if CONF_WITH_ULTRASATAN_CLOCK
+int has_ultrasatan_clock;
+int ultrasatan_id;
+#endif
 
 /*==== Internal declarations ==============================================*/
 static int atari_partition(UWORD unit,LONG *devices_available);
@@ -137,6 +142,22 @@ static void disk_init_one(UWORD unit,LONG *devices_available)
         for ( ; n < REMOVABLE_PARTITIONS; n++)
             add_partition(unit,devices_available,"BGM",0L,0L);
     }
+
+/* we're doing this here to avoid rescanning the ACSI bus to look for an RTC */
+#if CONF_WITH_ULTRASATAN_CLOCK
+    /* check if we've already gotten a clock and if not, whether the device looks like a US */
+    if(!has_ultrasatan_clock && memcmp(productname, "JOOKIE", 6) == 0) {
+        LONG ret;
+        ultrasatan_id = unit - NUMFLOPPIES;
+        /* validate that we've got a US */
+        ret = acsi_ioctl(ultrasatan_id,ULTRASATAN_GET_FIRMWARE_VERSION,NULL);
+        /* we don't care about the actual return value, only whether the request was successful */
+        if (ret == 0) {
+            has_ultrasatan_clock = 1;
+        }
+    }
+#endif /* CONF_WITH_ULTRASATAN_CLOCK */
+
 }
 
 /*
@@ -172,6 +193,11 @@ void disk_init_all(void)
     LONG devices_available = 0L;
     LONG bitmask;
     BLKDEV *b;
+
+#if CONF_WITH_ULTRASATAN_CLOCK
+    has_ultrasatan_clock = 0;
+    ultrasatan_id = 0;
+#endif
 
     /*
      * initialise bitmap of available devices
@@ -317,7 +343,6 @@ void disk_rescan(UWORD unit)
  * atari part inspired by Linux 2.4.x kernel (file fs/partitions/atari.c)
  */
 
-#include "string.h"
 #include "atari_rootsec.h"
 
 #define ICD_PARTS
@@ -621,11 +646,15 @@ static int atari_partition(UWORD unit,LONG *devices_available)
         struct rootsector *xrs = &physsect2.rs;
         unsigned long partsect;
 
+        /* ignore all inactive partitions */
         if ( !(pi->flg & 1) )
             continue;
+
         /* active partition */
         if (memcmp (pi->id, "XGM", 3) != 0) {
-            /* we don't care about other id's */
+            /* ignore partition ids that are not on the white-list */
+            if (!OK_id(pi->id))
+                continue;
             if (add_partition(unit,devices_available,pi->id,pi->st,pi->siz) < 0)
                 break;  /* max number of partitions reached */
 
@@ -857,7 +886,9 @@ LONG disk_rw(UWORD unit, UWORD rw, ULONG sector, UWORD count, UBYTE *buf)
     UWORD major = unit - NUMFLOPPIES;
     LONG ret;
     WORD bus, reldev;
+    BOOL no_byteswap;
     MAYBE_UNUSED(reldev);
+    MAYBE_UNUSED(no_byteswap);
 
 #if DETECT_NATIVE_FEATURES
     if (units[unit].features & UNIT_NATFEATS) {
@@ -870,6 +901,10 @@ LONG disk_rw(UWORD unit, UWORD rw, ULONG sector, UWORD count, UBYTE *buf)
 
     bus = GET_BUS(major);
     reldev = major - bus * DEVICES_PER_BUS;
+
+    /* EmuTOS extension: Rwabs without byteswap on IDE */
+    no_byteswap = rw & RW_NOBYTESWAP;
+    rw &= ~RW_NOBYTESWAP;
 
     /* hardware access to device */
     switch(bus) {
@@ -888,7 +923,8 @@ LONG disk_rw(UWORD unit, UWORD rw, ULONG sector, UWORD count, UBYTE *buf)
 #if CONF_WITH_IDE
     case IDE_BUS:
     {
-        BOOL need_byteswap = units[unit].byteswap;
+        /* Never byteswap when RW_NOBYTESWAP was set */
+        BOOL need_byteswap = no_byteswap? FALSE : units[unit].byteswap;
         ret = ide_rw(rw, sector, count, buf, reldev, need_byteswap);
         KDEBUG(("ide_rw() returned %ld\n", ret));
         break;

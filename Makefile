@@ -1,7 +1,7 @@
 #
 # Makefile - the EmuTOS overbloated Makefile
 #
-# Copyright (C) 2001-2020 The EmuTOS development team.
+# Copyright (C) 2001-2021 The EmuTOS development team.
 #
 # This file is distributed under the GPL, version 2 or at your
 # option any later version.  See doc/license.txt for details.
@@ -24,10 +24,76 @@
 MAKEFLAGS = --no-print-directory
 
 #
+# NODEP will accumulate the names of the targets which does not need to include
+# makefile.dep, to avoid rebuilding that file when not necessary.
+# This includes targets not using $(CC) and targets recursively invoking $(MAKE).
+#
+
+NODEP =
+
+# This must be the *first* rule of this Makefile. Don't move!
+# Variable assignments are allowed before this, but *not* rules.
+# Note: The first rule is used when make is invoked without argument.
+# So "make" is actually a synonym of "make all", actually "make help".
+.PHONY: all
+NODEP += all
+all:	help
+
+.PHONY: help
+NODEP += help
+help: UNIQUE = $(COUNTRY)
+help:
+	@echo "target  meaning"
+	@echo "------  -------"
+	@echo "help    this help message"
+	@echo "version display the EmuTOS version"
+	@echo "192     $(ROM_192), EmuTOS ROM padded to size 192 KB"
+	@echo "256     $(ROM_256), EmuTOS ROM padded to size 256 KB"
+	@echo "512     $(ROM_512), EmuTOS ROM padded to size 512 KB"
+	@echo "1024    $(ROM_1024), EmuTOS ROM padded to size 1024 KB"
+	@echo "aranym  $(ROM_ARANYM), suitable for ARAnyM"
+	@echo "firebee $(SREC_FIREBEE), to be flashed on the FireBee"
+	@echo "firebee-prg emutos.prg, a RAM tos for the FireBee"
+	@echo "amiga   $(ROM_AMIGA), EmuTOS ROM for Amiga hardware"
+	@echo "amigavampire $(VAMPIRE_ROM_AMIGA), EmuTOS ROM for Amiga optimized for Vampire V2"
+	@echo "v4sa    $(V4_ROM_AMIGA), EmuTOS ROM for Amiga Vampire V4 Standalone"
+	@echo "amigakd $(AMIGA_KICKDISK), EmuTOS as Amiga 1000 Kickstart disk"
+	@echo "amigaflop $(EMUTOS_ADF), EmuTOS RAM as Amiga boot floppy"
+	@echo "amigaflopvampire $(EMUTOS_VAMPIRE_ADF), EmuTOS RAM as Amiga boot floppy optimized for Vampire V2"
+	@echo "lisaflop $(EMUTOS_DC42), EmuTOS RAM as Apple Lisa boot floppy"
+	@echo "m548x-dbug $(SREC_M548X_DBUG), EmuTOS-RAM for dBUG on ColdFire Evaluation Boards"
+	@echo "m548x-bas  $(SREC_M548X_BAS), EmuTOS for BaS_gcc on ColdFire Evaluation Boards"
+	@echo "m548x-prg  emutos.prg, a RAM tos for ColdFire Evaluation Boards with BaS_gcc"
+	@echo "prg     emutos.prg, a RAM tos"
+	@echo "flop    $(EMUTOS_ST), a bootable floppy with RAM tos"
+	@echo "pak3    $(ROM_PAK3), suitable for PAK/3 systems"
+	@echo "all192  all 192 KB images"
+	@echo "all256  all 256 KB images"
+	@echo "all512  all 512 KB images"
+	@echo "allpak3 all PAK/3 images"
+	@echo "allprg  all emutos*.prg"
+	@echo "allflop all emutos*.st"
+	@echo "cart    $(ROM_CARTRIDGE), EmuTOS as a diagnostic cartridge"
+	@echo "clean"
+	@echo "expand  expand tabs to spaces"
+	@echo "crlf    convert all end of lines to LF"
+	@echo "charset check the charset of all the source files"
+	@echo "bugready set up files in preparation for 'bug update'"
+	@echo "gitready same as $(MAKE) expand crlf"
+	@echo "dsm     dsm.txt, an edited disassembly of emutos.img"
+	@echo "release build the release archives into $(RELEASE_DIR)"
+
+#
 # EmuTOS version
 #
 
 include version.mk
+
+# Display the EmuTOS version
+.PHONY: version
+NODEP += version
+version:
+	@echo '$(VERSION)'
 
 #
 # the country. should be a lowercase two-letter code as found in
@@ -45,8 +111,10 @@ COUNTRY = us
 
 DEF =
 UNIQUE =
+UNIQUEARG =
 ifneq (,$(UNIQUE))
 COUNTRY = $(UNIQUE)
+UNIQUEARG = -u$(UNIQUE)
 endif
 
 #
@@ -79,8 +147,10 @@ endif
 
 ifneq (,$(wildcard localconf.h))
 LOCALCONF = -DLOCALCONF
+LOCALCONFINFO = \n\#\#\# NOTE: Configuration settings from localconf.h were used.\n
 else
 LOCALCONF =
+LOCALCONFINFO =
 endif
 
 #
@@ -100,12 +170,11 @@ GEN_SRC =
 TOCLEAN = *~ */*~ $(CORE) *.tmp obj/*.h $(GEN_SRC)
 
 #
-# NODEP will accumulate the names of the targets which does not need to include
-# makefile.dep, to avoid rebuilding that file when not necessary.
-# This includes targets not using $(CC) and targets recursively invoking $(MAKE).
+# Don't update makefile.dep when the user asks to generate source files
+# from the command line. Does this really happen?
 #
 
-NODEP := %.c %.h %.pot
+NODEP += %.c %.h %.pot
 
 #
 # compilation flags
@@ -127,9 +196,13 @@ endif
 # indent flags
 INDENT = indent -kr
 
+# Archiver
+AR = $(TOOLCHAIN_PREFIX)ar
+ARFLAGS = rc
+
 # Linker with relocation information and binary output (image)
 LD = $(CC) $(MULTILIBFLAGS) -nostartfiles -nostdlib
-LIBS = -lgcc
+LIBS = -L obj -lgcc -lfont
 LDFLAGS = -Wl,-T,obj/emutospp.ld
 PCREL_LDFLAGS = -Wl,--oformat=binary,-Ttext=0,--entry=0
 
@@ -156,6 +229,7 @@ WARNFLAGS += -Werror=implicit-function-declaration
 WARNFLAGS += -Werror=format
 WARNFLAGS += -Werror=redundant-decls
 WARNFLAGS += -Werror=format-extra-args
+#WARNFLAGS += -Werror=unused-function
 #WARNFLAGS += -Wshadow
 #WARNFLAGS += -Werror
 
@@ -201,6 +275,7 @@ bios_src +=  memory.S processor.S vectors.S aciavecs.S bios.c xbios.c acsi.c \
              parport.c screen.c serport.c sound.c videl.c vt52.c xhdi.c \
              pmmu030.c 68040_pmmu.S \
              amiga.c amiga2.S spi_vamp.c \
+             lisa.c lisa2.S \
              delay.c delayasm.S sd.c memory2.c bootparams.c scsi.c nova.c \
              dsp.c dsp2.S
 
@@ -343,65 +418,10 @@ include country.mk
 
 SRC = $(foreach d,$(dirs),$(addprefix $(d)/,$($(d)_src))) $(end_src)
 
-CORE_OBJ = $(foreach d,$(core_dirs),$(patsubst %.c,obj/%.o,$(patsubst %.S,obj/%.o,$($(d)_src)))) $(FONTOBJ) obj/version.o
+CORE_OBJ = $(foreach d,$(core_dirs),$(patsubst %.c,obj/%.o,$(patsubst %.S,obj/%.o,$($(d)_src)))) $(FONTOBJ_COMMON) obj/version.o
 OPTIONAL_OBJ = $(foreach d,$(optional_dirs),$(patsubst %.c,obj/%.o,$(patsubst %.S,obj/%.o,$($(d)_src))))
 END_OBJ = $(patsubst %,obj/%.o,$(basename $(notdir $(end_src))))
 OBJECTS = $(CORE_OBJ) $(OPTIONAL_OBJ) $(END_OBJ)
-
-#
-# production targets
-#
-
-.PHONY: all
-NODEP += all
-all:	help
-
-.PHONY: help
-NODEP += help
-help: UNIQUE = $(COUNTRY)
-help:
-	@echo "target  meaning"
-	@echo "------  -------"
-	@echo "help    this help message"
-	@echo "version display the EmuTOS version"
-	@echo "192     $(ROM_192), EmuTOS ROM padded to size 192 KB"
-	@echo "256     $(ROM_256), EmuTOS ROM padded to size 256 KB"
-	@echo "512     $(ROM_512), EmuTOS ROM padded to size 512 KB"
-	@echo "aranym  $(ROM_ARANYM), suitable for ARAnyM"
-	@echo "firebee $(SREC_FIREBEE), to be flashed on the FireBee"
-	@echo "firebee-prg emutos.prg, a RAM tos for the FireBee"
-	@echo "amiga   $(ROM_AMIGA), EmuTOS ROM for Amiga hardware"
-	@echo "amigavampire $(VAMPIRE_ROM_AMIGA), EmuTOS ROM for Amiga optimized for Vampire V2"
-	@echo "v4sa    $(V4_ROM_AMIGA), EmuTOS ROM for Amiga Vampire V4 Standalone"
-	@echo "amigakd $(AMIGA_KICKDISK), EmuTOS as Amiga 1000 Kickstart disk"
-	@echo "amigaflop $(EMUTOS_ADF), EmuTOS RAM as Amiga boot floppy"
-	@echo "amigaflopvampire $(EMUTOS_VAMPIRE_ADF), EmuTOS RAM as Amiga boot floppy optimized for Vampire V2"
-	@echo "m548x-dbug $(SREC_M548X_DBUG), EmuTOS-RAM for dBUG on ColdFire Evaluation Boards"
-	@echo "m548x-bas  $(SREC_M548X_BAS), EmuTOS for BaS_gcc on ColdFire Evaluation Boards"
-	@echo "m548x-prg  emutos.prg, a RAM tos for ColdFire Evaluation Boards with BaS_gcc"
-	@echo "prg     emutos.prg, a RAM tos"
-	@echo "flop    $(EMUTOS_ST), a bootable floppy with RAM tos"
-	@echo "pak3    $(ROM_PAK3), suitable for PAK/3 systems"
-	@echo "all192  all 192 KB images"
-	@echo "all256  all 256 KB images"
-	@echo "allpak3 all PAK/3 images"
-	@echo "allprg  all emutos*.prg"
-	@echo "allflop all emutos*.st"
-	@echo "cart    $(ROM_CARTRIDGE), EmuTOS as a diagnostic cartridge"
-	@echo "clean"
-	@echo "expand  expand tabs to spaces"
-	@echo "crlf    convert all end of lines to LF"
-	@echo "charset check the charset of all the source files"
-	@echo "bugready set up files in preparation for 'bug update'"
-	@echo "gitready same as $(MAKE) expand crlf"
-	@echo "dsm     dsm.txt, an edited disassembly of emutos.img"
-	@echo "release build the release archives into $(RELEASE_DIR)"
-
-# Display the EmuTOS version
-.PHONY: version
-NODEP += version
-version:
-	@echo '$(VERSION)'
 
 #
 # Preprocess the linker script, to allow #include, #define, #if, etc.
@@ -419,7 +439,7 @@ obj/emutospp.ld: emutos.ld include/config.h tosvars.ld
 
 TOCLEAN += *.img *.map
 
-emutos.img: $(OBJECTS) obj/emutospp.ld Makefile
+emutos.img: $(OBJECTS) obj/emutospp.ld obj/libfont.a Makefile
 	$(LD) $(CORE_OBJ) $(LIBS) $(OPTIONAL_OBJ) $(LIBS) $(END_OBJ) $(LDFLAGS) -Wl,-Map=emutos.map -o emutos.img
 	@if [ $$(($$(awk '/^\.data /{print $$3}' emutos.map))) -gt 0 ]; then \
 	  echo "### Warning: The DATA segment is not empty."; \
@@ -457,6 +477,7 @@ NODEP += 192
 	$(MAKE) DEF='$(DEF)' OPTFLAGS='$(OPTFLAGS)' WITH_CLI=$(WITH_CLI) UNIQUE=$(UNIQUE) ROM_192=$(ROM_192) $(ROM_192)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS104))) bytes more than TOS 1.04)"
+	@printf "$(LOCALCONFINFO)"
 
 $(ROM_192): ROMSIZE = 192
 $(ROM_192): emutos.img mkrom
@@ -477,31 +498,31 @@ NODEP += 256
 	$(MAKE) DEF='$(DEF)' OPTFLAGS='$(OPTFLAGS)' UNIQUE=$(UNIQUE) ROM_256=$(ROM_256) $(ROM_256)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS206))) bytes more than TOS 2.06)"
+	@printf "$(LOCALCONFINFO)"
 
 $(ROM_256): ROMSIZE = 256
 $(ROM_256): emutos.img mkrom
 	./mkrom pad $(ROMSIZE)k $< $(ROM_256)
 
 #
-# 512kB Image (for Falcon)
+# 512kB Image (for TT or Falcon; also usable for ST/STe under Hatari)
 #
 
-ROM_512 = etos512k.img
-SYMFILE = $(addsuffix .sym,$(basename $(ROM_512)))
+ROM_512 = etos512$(UNIQUE).img
 
 .PHONY: 512
-512: OPTFLAGS = $(SMALL_OPTFLAGS)
+NODEP += 512
+512: UNIQUE = $(COUNTRY)
 512: override DEF += -DTARGET_512
-512: $(ROM_512) $(SYMFILE)
+512:
+	$(MAKE) DEF='$(DEF)' OPTFLAGS='$(OPTFLAGS)' UNIQUE=$(UNIQUE) MULTIKEYBD='-k' ROM_512=$(ROM_512) $(ROM_512)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS404))) bytes more than TOS 4.04)"
+	@printf "$(LOCALCONFINFO)"
 
 $(ROM_512): ROMSIZE = 512
 $(ROM_512): emutos.img mkrom
 	./mkrom pad $(ROMSIZE)k $< $(ROM_512)
-
-.PHONY: falcon
-falcon: help
 
 #
 # 512kB PAK/3 Image (based on 256kB Image)
@@ -518,10 +539,29 @@ pak3:
 	$(MAKE) DEF='$(DEF)' OPTFLAGS='$(OPTFLAGS)' UNIQUE=$(UNIQUE) ROM_PAK3=$(ROM_PAK3) $(ROM_PAK3)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS206))) bytes more than TOS 2.06)"
+	@printf "$(LOCALCONFINFO)"
 
 $(ROM_PAK3): ROMSIZE = 256
 $(ROM_PAK3): emutos.img mkrom
 	./mkrom pak3 $< $(ROM_PAK3)
+
+#
+# 1024kB Image (for Hatari (and potentially other emulators))
+#
+
+ROM_1024 = etos1024k.img
+SYMFILE = $(addsuffix .sym,$(basename $(ROM_1024)))
+
+.PHONY: 1024
+1024: override DEF += -DTARGET_1024
+1024: $(ROM_1024) $(SYMFILE)
+	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
+	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS404))) bytes more than TOS 4.04)"
+	@printf "$(LOCALCONFINFO)"
+
+$(ROM_1024): ROMSIZE = 1024
+$(ROM_1024): emutos.img mkrom
+	./mkrom pad $(ROMSIZE)k $< $(ROM_1024)
 
 #
 # ARAnyM Image
@@ -532,12 +572,14 @@ ROM_ARANYM = emutos-aranym.img
 .PHONY: aranym
 NODEP += aranym
 aranym: override DEF += -DMACHINE_ARANYM
+aranym: OPTFLAGS = $(SMALL_OPTFLAGS)
 aranym: CPUFLAGS = -m68040
 aranym:
 	@echo "# Building ARAnyM EmuTOS into $(ROM_ARANYM)"
-	$(MAKE) CPUFLAGS='$(CPUFLAGS)' DEF='$(DEF)' ROM_512=$(ROM_ARANYM) $(ROM_ARANYM)
+	$(MAKE) CPUFLAGS='$(CPUFLAGS)' OPTFLAGS='$(OPTFLAGS)' DEF='$(DEF)' ROM_512=$(ROM_ARANYM) $(ROM_ARANYM)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS404))) bytes more than TOS 4.04)"
+	@printf "$(LOCALCONFINFO)"
 
 #
 # Diagnostic Cartridge Image
@@ -557,6 +599,7 @@ cart:
 	./mkrom stc emutos.img emutos.stc
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS104))) bytes more than TOS 1.04)"
+	@printf "$(LOCALCONFINFO)"
 
 #
 # Amiga Image
@@ -577,6 +620,7 @@ amiga:
 	$(MAKE) CPUFLAGS='$(CPUFLAGS)' DEF='$(DEF)' OPTFLAGS='$(OPTFLAGS)' UNIQUE=$(UNIQUE) ROM_AMIGA=$(ROM_AMIGA) $(ROM_AMIGA)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS206))) bytes more than TOS 2.06)"
+	@printf "$(LOCALCONFINFO)"
 
 $(ROM_AMIGA): emutos.img mkrom
 	./mkrom amiga $< $(ROM_AMIGA)
@@ -642,6 +686,7 @@ firebee:
 	$(MAKE) COLDFIRE=1 CPUFLAGS='$(CPUFLAGS)' DEF='$(DEF)' LMA=0xe0600000 SRECFILE=$(SREC_FIREBEE) $(SREC_FIREBEE)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS404))) bytes more than TOS 4.04)"
+	@printf "$(LOCALCONFINFO)"
 
 .PHONY: firebee-prg
 NODEP += firebee-prg
@@ -674,6 +719,7 @@ m548x-dbug:
 	$(MAKE) COLDFIRE=1 CPUFLAGS='$(CPUFLAGS)' DEF='$(DEF)' UNIQUE=$(UNIQUE) LMA=0x00e00000 SRECFILE=$(SREC_M548X_DBUG) $(SREC_M548X_DBUG)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS404))) bytes more than TOS 4.04)"
+	@printf "$(LOCALCONFINFO)"
 
 SREC_M548X_BAS = emutos-m548x-bas.s19
 .PHONY: m548x-bas
@@ -686,6 +732,7 @@ m548x-bas:
 	$(MAKE) COLDFIRE=1 CPUFLAGS='$(CPUFLAGS)' DEF='$(DEF)' UNIQUE=$(UNIQUE) LMA=0xe0100000 SRECFILE=$(SREC_M548X_BAS) $(SREC_M548X_BAS)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes ($$(($$MEMBOT - $(MEMBOT_TOS404))) bytes more than TOS 4.04)"
+	@printf "$(LOCALCONFINFO)"
 
 #
 # Special variants of EmuTOS running in RAM instead of ROM.
@@ -711,6 +758,7 @@ TOCLEAN += emutos*.prg
 prg: $(EMUTOS_PRG)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes"
+	@printf "$(LOCALCONFINFO)"
 
 obj/boot.o: obj/ramtos.h
 # incbin dependencies are not automatically detected
@@ -735,6 +783,7 @@ flop:
 	$(MAKE) UNIQUE=$(UNIQUE) $(EMUTOS_ST)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes"
+	@printf "$(LOCALCONFINFO)"
 
 $(EMUTOS_ST): override DEF += -DTARGET_FLOPPY
 $(EMUTOS_ST): OPTFLAGS = $(SMALL_OPTFLAGS)
@@ -765,6 +814,7 @@ amigaflop:
 	$(MAKE) CPUFLAGS='$(CPUFLAGS)' DEF='$(DEF)' OPTFLAGS='$(OPTFLAGS)' UNIQUE=$(UNIQUE) EMUTOS_ADF=$(EMUTOS_ADF) $(EMUTOS_ADF)
 	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
 	echo "# RAM used: $$(($$MEMBOT)) bytes"
+	@printf "$(LOCALCONFINFO)"
 
 EMUTOS_VAMPIRE_ADF = emutos-vampire.adf
 
@@ -791,6 +841,56 @@ amigaboot.img: obj/amigaboot.o obj/bootram.o
 obj/amigaboot.o: obj/ramtos.h
 
 #
+# lisaflop
+#
+
+TOCLEAN += *.dc42
+
+EMUTOS_DC42 = emutos.dc42
+LISA_DEFS =
+
+.PHONY: lisaflop
+NODEP += lisaflop
+lisaflop: UNIQUE = $(COUNTRY)
+lisaflop: OPTFLAGS = $(SMALL_OPTFLAGS)
+lisaflop: override DEF += -DTARGET_LISA_FLOPPY $(LISA_DEFS)
+lisaflop:
+	$(MAKE) CPUFLAGS='$(CPUFLAGS)' DEF='$(DEF)' OPTFLAGS='$(OPTFLAGS)' UNIQUE=$(UNIQUE) EMUTOS_DC42=$(EMUTOS_DC42) $(EMUTOS_DC42)
+	@MEMBOT=$(call SHELL_SYMADDR,__end_os_stram,emutos.map);\
+	echo "# RAM used: $$(($$MEMBOT)) bytes"
+	@printf "$(LOCALCONFINFO)"
+
+$(EMUTOS_DC42): lisaboot.img emutos.img mkrom
+	./mkrom lisa-floppy lisaboot.img emutos.img $@
+
+lisaboot.img: obj/lisaboot.o obj/bootram.o
+	$(LD) $+ $(PCREL_LDFLAGS) -o $@
+
+obj/lisaboot.o: obj/ramtos.h
+
+#
+# localisation support: create bios/ctables.h include/i18nconf.h
+#
+# we would like to group targets, since localise generates both targets
+# at the same time.  however, this is not supported until gcc make 4.2.
+# so that we can use old versions of make, we just run localise twice
+# instead, creating a .tmp file each time as a byproduct.
+#
+
+GEN_SRC += bios/ctables.h include/i18nconf.h
+TOCLEAN += localise include/i18nconf.h bios/ctables.h
+
+NODEP += localise
+localise: tools/localise.c
+	$(NATIVECC) $< -o $@
+
+bios/ctables.h: obj/country localise.ctl localise
+	./localise $(UNIQUEARG) $(MULTIKEYBD) localise.ctl bios/ctables.h localise1.tmp
+
+include/i18nconf.h: obj/country localise.ctl localise
+	./localise $(UNIQUEARG) $(MULTIKEYBD) localise.ctl localise2.tmp include/i18nconf.h
+
+#
 # NLS support
 #
 
@@ -803,6 +903,7 @@ NODEP += bug
 bug: tools/bug.c
 	$(NATIVECC) $< -o $@
 
+# even if UNIQUE is specified, we ensure langs.c exists to avoid dependency problems
 util/langs.c: $(POFILES) po/LINGUAS bug po/messages.pot
 	./bug make
 
@@ -858,10 +959,10 @@ NODEP += mkrom
 mkrom: tools/mkrom.c
 	$(NATIVECC) $< -o $@
 
-# test target to build all tools
+# test target to build all tools that can be built by the Makefile
 .PHONY: tools
 NODEP += tools
-tools: bug draft erd mkflop mkrom tos-lang-change
+tools: bug draft erd grd ird localise mkflop mkrom mrd tos-lang-change
 
 # user tool, not needed in EmuTOS building
 TOCLEAN += tos-lang-change
@@ -882,6 +983,17 @@ allpak3:
 	  echo "sleep 1"; \
 	  sleep 1; \
 	  $(MAKE) pak3 UNIQUE=$$i || exit 1; \
+	done
+
+.PHONY: all512
+NODEP += all512
+all512:
+	@for i in $(COUNTRIES); \
+	do \
+	  echo; \
+	  echo "sleep 1"; \
+	  sleep 1; \
+	  $(MAKE) 512 UNIQUE=$$i || exit 1; \
 	done
 
 .PHONY: all256
@@ -989,45 +1101,6 @@ obj/country: always-execute-recipe
 	done
 
 #
-# i18nconf.h - this file is automatically created by the Makefile. This
-# is done this way instead of simply passing the flags as -D on the
-# command line because:
-# - the command line is shorter
-# - it allows #defining CONF_KEYB as KEYB_US with KEYB_US #defined elsewhere
-# - explicit dependencies can force rebuilding files that include it
-#
-
-GEN_SRC += include/i18nconf.h
-
-ifneq (,$(UNIQUE))
-include/i18nconf.h: obj/country
-	@echo '# Generating $@ with CONF_LANG="$(ETOSLANG)" CONF_KEYB=KEYB_$(ETOSKEYB) CONF_CHARSET=CHARSET_$(ETOSCSET)'
-	@rm -f $@; touch $@
-	@echo '#define CONF_MULTILANG 0' >> $@
-	@echo '#define CONF_WITH_NLS 0' >> $@
-	@echo '#define CONF_LANG "$(ETOSLANG)"' >> $@
-	@echo '#define CONF_KEYB KEYB_$(ETOSKEYB)' >> $@
-	@echo '#define CONF_CHARSET CHARSET_$(ETOSCSET)' >> $@
-	@echo "#define CONF_IDT ($(ETOSIDT))" >> $@
-else
-include/i18nconf.h: obj/country
-	@echo '# Generating $@ with CONF_MULTILANG=1'
-	@rm -f $@; touch $@
-	@echo '#define CONF_MULTILANG 1' >> $@
-	@echo '#define CONF_WITH_NLS 1' >> $@
-endif
-
-#
-# ctables.h - the country tables, generated from country.mk, and only
-# included in bios/country.c
-#
-
-GEN_SRC += bios/ctables.h
-
-bios/ctables.h: country.mk tools/genctables.awk
-	awk -f tools/genctables.awk < country.mk > $@
-
-#
 # OS header
 #
 
@@ -1114,8 +1187,7 @@ TOCLEAN += *.sym
 	$(SHELL) tools/map2sym.sh emutos.map >$@
 
 #
-# indent - indents the files except when there are warnings
-# checkindent - check for indent warnings, but do not alter files.
+# checkindent - check for indent warnings, but do not alter files
 #
 
 INDENTFILES = bdos/*.c bios/*.c util/*.c tools/*.c desk/*.c aes/*.c vdi/*.c
@@ -1137,29 +1209,6 @@ checkindent:
 		false; \
 	else \
 		echo done.; \
-	fi
-
-.PHONY: indent
-indent:
-	@err=0 ; \
-	for i in $(INDENTFILES) ; do \
-		$(INDENT) <$$i 2>err.tmp | expand >indent.tmp; \
-		if ! test -s err.tmp ; then \
-			if ! cmp -s indent.tmp $$i ; then \
-				echo indenting $$i; \
-				mv $$i $$i~; \
-				mv indent.tmp $$i; \
-			fi \
-		else \
-			err=$$(expr $$err + 1); \
-			echo in $$i:; \
-			cat err.tmp; \
-		fi \
-	done ; \
-	rm -f err.tmp indent.tmp; \
-	if [ $$err -ne 0 ] ; then \
-		echo $$err 'file(s)' untouched because of warnings; \
-		false; \
 	fi
 
 
