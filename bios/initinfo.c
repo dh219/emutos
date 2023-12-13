@@ -33,6 +33,7 @@
 #include "biosext.h"
 #include "version.h"
 #include "bios.h"
+#include "delay.h"
 
 #include "initinfo.h"
 #include "conout.h"
@@ -295,6 +296,9 @@ WORD initinfo(ULONG *pshiftbits)
     if (altramsize > 0)
         initinfo_height += 1;
 #endif
+#if INITINFO_SHOWCALS
+    initinfo_height += 1;
+#endif
     if (hdd_available)
         initinfo_height += 1;
 
@@ -340,6 +344,9 @@ WORD initinfo(ULONG *pshiftbits)
     if (altramsize > 0) {
         pair_start("Alt-RAM"); cprintf_bytesize(altramsize); pair_end();
     }
+#endif
+#if INITINFO_SHOWCALS
+    pair_start("Loops per ms"); cprintf("%lu", loopcount_1_msec); pair_end();
 #endif
 
     cprintf("\033j");       /* save current cursor position */
