@@ -1,7 +1,7 @@
 /*
  * floppy.c - floppy routines
  *
- * Copyright (C) 2001-2022 The EmuTOS development team
+ * Copyright (C) 2001-2024 The EmuTOS development team
  *
  * Authors:
  *  LVL   Laurent Vogel
@@ -679,8 +679,9 @@ static const struct _protobt protobt_data[] = {
     { SECTOR_SIZE, 2, 1, 2, 112,  720, 0xfd, 2, 9, 2, 0 },
     { SECTOR_SIZE, 2, 1, 2, 112,  720, 0xf9, 5, 9, 1, 0 },
     { SECTOR_SIZE, 2, 1, 2, 112, 1440, 0xf9, 5, 9, 2, 0 },
-    { SECTOR_SIZE, 2, 1, 2, 224, 2880, 0xf0, 5, 18, 2, 0 }, /* for HD floppy */
-    { SECTOR_SIZE, 2, 1, 2, 224, 5760, 0xf0, 10, 36, 2, 0 } /* for ED floppy */
+    { SECTOR_SIZE, 2, 1, 2, 224, 2880, 0xf0, 5, 18, 2, 0 },  /* for HD floppy */
+    { SECTOR_SIZE, 2, 1, 2, 224, 5760, 0xf0, 10, 36, 2, 0 }, /* for ED floppy */
+    { SECTOR_SIZE, 2, 1, 2, 112, 1600, 0xf9, 5, 10, 2, 0 }   /* for 800K floppy */
 };
 #define NUM_PROTOBT_ENTRIES ARRAY_SIZE(protobt_data)
 

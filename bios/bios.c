@@ -2,7 +2,7 @@
  *  bios.c - C portion of BIOS initialization and front end
  *
  * Copyright (C) 2001 Lineo, Inc.
- * Copyright (C) 2001-2023 The EmuTOS development team
+ * Copyright (C) 2001-2024 The EmuTOS development team
  *
  * Authors:
  *  SCC     Steve C. Cavender
@@ -140,7 +140,7 @@ static void vecs_init(void)
      * By default, any unexpected exception calls dopanic().
      */
     init_exc_vec();
-    init_user_vec();
+    init_user_vec(FIRST_BOOT);
 
     /* Some user drivers may install interrupt handlers and call the previous
      * ones. For example, ARAnyM's network driver for MiNT (nfeth.xif) and fVDI
