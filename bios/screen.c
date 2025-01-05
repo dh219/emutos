@@ -13,7 +13,7 @@
  * option any later version.  See doc/license.txt for details.
  */
 
-/*#define ENABLE_KDEBUG*/
+#define ENABLE_KDEBUG
 
 #include "emutos.h"
 #include "machine.h"
@@ -752,7 +752,8 @@ ULONG calc_vram_size(void)
     if (HAS_VIDEL)
         return FALCON_VRAM_SIZE + EXTRA_VRAM_SIZE;
 
-    vram_size = (ULONG)BYTES_LIN * V_REZ_VT;
+    //vram_size = (ULONG)BYTES_LIN * V_REZ_VT;
+    vram_size = (ULONG)640*480/2;
 
     /* TT TOS allocates 256 bytes more than actually needed. */
     if (HAS_TT_SHIFTER)
@@ -766,6 +767,7 @@ ULONG calc_vram_size(void)
      * of 256 bytes.  For compatibility with ST TOS, we also allocate
      * (at least) 768 bytes more than actually needed.
      */
+    KDEBUG(("Calculated vram_size of %ld\n", vram_size));
     return (vram_size + 768UL + 255UL) & ~255UL;
 #endif
 }
@@ -993,7 +995,7 @@ static void atari_setrez(WORD rez, WORD videlmode)
             *(volatile UBYTE *)TT_SHIFTER = sshiftmod = rez;
     }
 #endif
-    else if (rez < 3) {         /* ST resolution */
+    else if (rez < 6) {         /* ST resolution */
         *(volatile UBYTE *)ST_SHIFTER = sshiftmod = rez;
     }
 }

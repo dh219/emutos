@@ -317,7 +317,7 @@ int change_resolution(WORD *newres,WORD *newmode)
 #endif
 
 #if CONF_WITH_TT_SHIFTER
-    if (has_tt_shifter)
+    if (1||has_tt_shifter)
         return change_tt_rez(newres);
 #endif
 
