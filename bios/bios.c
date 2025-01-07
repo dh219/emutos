@@ -495,6 +495,24 @@ static void bios_init(void)
     }
 #endif
 
+#ifdef CONF_WITH_PICOGFX
+    /* Fake ST low */
+    sshiftmod = 0;
+    /* Line A vars */
+    /* Number of bitplanes */
+    v_planes = 4;
+    /* Bytes per scan-line */
+    BYTES_LIN = v_lin_wr = 320;
+    /* Vertical resolution */
+    V_REZ_VT = 480;
+    /* Horizontal resolution */
+    V_REZ_HZ = 640;
+
+    *(volatile UBYTE *) ST_SHIFTER = 4;
+
+    set_rez_hacked();
+#endif
+
 #if CONF_WITH_NLS
     KDEBUG(("nls_init()\n"));
     nls_init();         /* init native language support */

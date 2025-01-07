@@ -752,8 +752,11 @@ ULONG calc_vram_size(void)
     if (HAS_VIDEL)
         return FALCON_VRAM_SIZE + EXTRA_VRAM_SIZE;
 
-    //vram_size = (ULONG)BYTES_LIN * V_REZ_VT;
+#ifdef CONF_WITH_PICOGFX
     vram_size = (ULONG)640*480/2;
+#else
+    vram_size = (ULONG)BYTES_LIN * V_REZ_VT;
+#endif
 
     /* TT TOS allocates 256 bytes more than actually needed. */
     if (HAS_TT_SHIFTER)

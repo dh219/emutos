@@ -490,8 +490,6 @@ void vdi_v_clsvwk(Vwk * vwk)
     Mfree(vwk);
 }
 
-
-
 /* OPEN_WORKSTATION: */
 void vdi_v_opnwk(Vwk * vwk)
 {
@@ -504,6 +502,7 @@ void vdi_v_opnwk(Vwk * vwk)
      * mode + 2 in INTIN[0].
      */
     newrez = INTIN[0] - 2;
+
     if (
         (newrez == ST_LOW) || (newrez == ST_MEDIUM) || (newrez == ST_HIGH)
 #if CONF_WITH_TT_SHIFTER
