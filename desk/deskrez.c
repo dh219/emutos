@@ -13,7 +13,7 @@
  * option any later version.  See doc/license.txt for details.
  */
 
-/* #define ENABLE_KDEBUG */
+#define ENABLE_KDEBUG
 
 #include "emutos.h"
 #include "aesbind.h"
@@ -83,6 +83,43 @@ static const WORD falconmode_from_button[] =        /*     VGA           RGB    
 #define NUM_FALCON_BUTTONS ARRAY_SIZE(falconmode_from_button)
 
 #endif /* CONF_WITH_VIDEL */
+
+#ifdef CONF_WITH_PICOGFX
+
+#define PICOGFX_1BPP 0x0
+#define PICOGFX_2BPP 0x1
+#define PICOGFX_4BPP 0x2
+#define PICOGFX_8BPP 0x3
+#define PICOGFX_16BPP 0x4
+#define PICOGFX_40COL 0x10
+#define PICOGFX_DLINE 0x40
+
+static const WORD picogfx_mode_from_button[] =          /*     VGA           RGB     */
+    { PICOGFX_1BPP,                                     /* 640x480x2     640x400x2   */
+      PICOGFX_2BPP,                                     /* 640x480x4     640x400x4   */
+      PICOGFX_4BPP,                                     /* 640x480x16    640x400x16  */
+      PICOGFX_8BPP,                                     /* 640x480x256   640x400x256 */
+      PICOGFX_16BPP,                                    /*     n/a       640x400x64K */
+      PICOGFX_DLINE|PICOGFX_1BPP,                       /* 640x240x2     640x200x2   */
+      PICOGFX_DLINE|PICOGFX_2BPP,                       /* 640x240x4     640x200x4   */
+      PICOGFX_DLINE|PICOGFX_4BPP,                       /* 640x240x16    640x200x16  */
+      PICOGFX_DLINE|PICOGFX_8BPP,                       /* 640x240x256   640x200x256 */
+      PICOGFX_DLINE|PICOGFX_16BPP,                      /*     n/a       640x200x64K */
+      PICOGFX_40COL|PICOGFX_2BPP,                       /* 320x480x4     320x400x4   */
+      PICOGFX_40COL|PICOGFX_4BPP,                       /* 320x480x16    320x400x16  */
+      PICOGFX_40COL|PICOGFX_8BPP,                       /* 320x480x256   320x400x256 */
+      PICOGFX_40COL|PICOGFX_16BPP,                      /* 320x480x64K   320x400x64K */
+      PICOGFX_40COL|PICOGFX_DLINE|PICOGFX_2BPP,         /* 320x240x4     320x200x4   */
+      PICOGFX_40COL|PICOGFX_DLINE|PICOGFX_4BPP,         /* 320x240x16    320x200x16  */
+      PICOGFX_40COL|PICOGFX_DLINE|PICOGFX_8BPP,         /* 320x240x256   320x200x256 */
+      PICOGFX_40COL|PICOGFX_DLINE|PICOGFX_16BPP,        /* 320x240x64K   320x200x64K */
+      VIDEL_COMPAT|PICOGFX_1BPP,                        /* ST High */
+      VIDEL_COMPAT|PICOGFX_2BPP,                        /* ST Medium */
+      VIDEL_COMPAT|PICOGFX_4BPP };                      /* ST Low */
+
+#define NUM_FALCON_BUTTONS ARRAY_SIZE(picogfx_mode_from_button)
+
+#endif
 
 /*
  *  change_st_rez(): change desktop ST resolution
@@ -231,6 +268,92 @@ WORD mode, monitor;
 }
 #endif
 
+#ifdef CONF_WITH_PICOGFX
+/*
+ *  change_picogfx_rez(): change desktop picgfx resolution
+ *  returns:    0   user cancelled change
+ *              1   user wants to change; newres is set to 3, and newmode
+ *                  is updated with the new video mode.
+ */
+static int change_picogfx_rez(WORD *newres,WORD *newmode)
+{
+    OBJECT *tree, *obj;
+    int i, selected;
+    WORD oldmode, oldbase, oldoptions;
+    WORD mode, monitor;
+
+    oldmode = 0;//VsetMode(-1);
+    oldbase = oldmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);
+    oldoptions = oldmode & (VIDEL_OVERSCAN|VIDEL_PAL|VIDEL_VGA);
+    if (!(oldoptions&VIDEL_VGA))    /* if RGB mode, */
+        oldbase ^= VIDEL_VERTICAL;  /* this bit has inverted meaning */
+
+    for (i = 0; i < NUM_FALCON_BUTTONS; i++)
+        if (oldbase == picogfx_mode_from_button[i])
+            break;
+    selected = i;
+
+    /* set up dialog & display */
+    tree = desk_rs_trees[ADFALREZ];
+
+    /*
+     * if we're not compiling with 16-bit support in the VDI,
+     * hide the Truecolor header text
+     */
+#if !CONF_WITH_VDI_16BIT
+    obj = tree + FREZTEXT;          /* this hides the "TC" header text */
+    obj->ob_flags |= HIDETREE;
+#endif
+    for (i = 0, obj = tree+FREZLIST; i < NUM_FALCON_BUTTONS; i++, obj++) {
+        if (i == selected)
+            obj->ob_state |= SELECTED;
+        else obj->ob_state &= ~SELECTED;
+    }
+
+    inf_show(tree,ROOT);
+
+    if (inf_what(tree,FREZOK) == 0)
+        return 0;
+
+
+    /* look for button with SELECTED state */
+    i = inf_gindex(tree,FREZLIST,NUM_FALCON_BUTTONS);
+    if (i < 0)                  /* paranoia */
+        return 0;
+    if (i == selected)          /* no change */
+        return 0;
+
+    mode = picogfx_mode_from_button[i];// | oldoptions;
+
+    if (Srealloc(-1L) < /*VgetSize(mode)*/ 640*480/2 ) {
+        malloc_fail_alert();
+        return 0;
+    }
+
+
+    if( mode & VIDEL_COMPAT ) {
+        switch( mode & 0x7 ) {
+            case(PICOGFX_1BPP):
+                *newres = 2;
+                break;
+            case(PICOGFX_2BPP):
+                *newres = 1;
+                break;
+            case(PICOGFX_4BPP):
+            default:
+                *newres = 0;
+                break;
+        }
+    }
+    else
+        *newres = FALCON_REZ;
+    *newmode = mode;
+
+    KDEBUG(("new res=%x, new mode=%x\n", *newres, *newmode ));
+    return 1;
+}
+#endif
+
 #ifdef MACHINE_AMIGA
 /* This assumes that inside ADAMIREZ dialog, buttons are sorted
  * left to right then top to bottom. */
@@ -309,6 +432,10 @@ int change_resolution(WORD *newres,WORD *newmode)
 {
 #ifdef MACHINE_AMIGA
     return change_amiga_rez(newres,newmode);
+#endif
+
+#ifdef CONF_WITH_PICOGFX
+    return change_picogfx_rez(newres,newmode);
 #endif
 
 #if CONF_WITH_VIDEL

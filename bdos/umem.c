@@ -334,7 +334,7 @@ ret:
     return ret_value;
 }
 
-#if CONF_WITH_VIDEL
+#if CONF_WITH_VIDEL || defined(CONF_WITH_PICOGFX)
 /*
  *  srealloc - Function 0x15 (Srealloc)
  *
@@ -361,8 +361,12 @@ void *srealloc(long amount)
     LONG available;
     BOOL realloc;   /* TRUE iff reallocation is possible */
 
+    KDEBUG(("srealloc(%ld)\n", amount));
+
+#if CONF_WITH_VIDEL && !defined( CONF_WITH_PICOGFX )
     if (!has_videl)
         return (void *)EINVFN;
+#endif        
 
     if (video_ram_size == 0)    /* unspecified */
         return NULL;

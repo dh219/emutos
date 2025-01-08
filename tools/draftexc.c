@@ -106,7 +106,7 @@ char *exclude_items[] =
 #if !CONF_WITH_TT_SHIFTER           /* resolution setting */
     "ADTTREZ",
 #endif
-#if !CONF_WITH_VIDEL
+#if !CONF_WITH_VIDEL && !defined(CONF_WITH_PICOGFX)
     "ADFALREZ",
     "STREZ1",
     "STREZ2",

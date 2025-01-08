@@ -197,7 +197,7 @@ static const FND funcs[] =
     { NI, 0, 0 },               /* 0x14 */
 #endif
 
-#if CONF_WITH_VIDEL
+#if CONF_WITH_VIDEL || defined( CONF_WITH_PICOGFX )
     { F(srealloc),  0, 2 },     /* 0x15 */
 #else
     { NI, 0, 0 },               /* 0x15 */

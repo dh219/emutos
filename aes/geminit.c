@@ -19,7 +19,7 @@
 *       -------------------------------------------------------------
 */
 
-/* #define ENABLE_KDEBUG */
+#define ENABLE_KDEBUG
 
 #include "emutos.h"
 #include "obdefs.h"
@@ -780,7 +780,7 @@ void gem_main(void)
             initialise_palette_registers(gl_nextrez-2, 0);
             break;
 #endif
-#if CONF_WITH_VIDEL || defined(MACHINE_AMIGA)
+#if CONF_WITH_VIDEL || defined(MACHINE_AMIGA) || defined( CONF_WITH_PICOGFX )
         case 2:                     /* Falcon display */
             Setscreen(0L, 0L, FALCON_REZ, gl_nextrez);
             /* note: no need to initialise the palette regs

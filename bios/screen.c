@@ -13,7 +13,7 @@
  * option any later version.  See doc/license.txt for details.
  */
 
-/*#define ENABLE_KDEBUG*/
+#define ENABLE_KDEBUG
 
 #include "emutos.h"
 #include "machine.h"
@@ -41,9 +41,14 @@
 void detect_monitor_change(void);
 static void setphys(const UBYTE *addr);
 
-#if CONF_WITH_VIDEL
+#if CONF_WITH_VIDEL || defined(CONF_WITH_PICOGFX)
 LONG video_ram_size;        /* these are used by Srealloc() */
 void *video_ram_addr;
+#endif
+
+#ifdef CONF_WITH_PICOGFX
+WORD picogfx_setmode(WORD mode);
+static WORD current_video_mode;
 #endif
 
 #if CONF_WITH_ATARI_VIDEO
@@ -646,7 +651,7 @@ void screen_init_address(void)
     screen_start = balloc_stram(vram_size, TRUE);
 #endif /* CONF_VRAM_ADDRESS */
 
-#if CONF_WITH_VIDEL
+#if CONF_WITH_VIDEL || defined( CONF_WITH_PICOGFX )
     video_ram_size = vram_size;     /* these are used by Srealloc() */
     video_ram_addr = screen_start;
 #endif
@@ -784,6 +789,48 @@ static void shifter_get_current_mode_info(UWORD *planes, UWORD *hz_rez, UWORD *v
 
 static void atari_get_current_mode_info(UWORD *planes, UWORD *hz_rez, UWORD *vt_rez)
 {
+#ifdef CONF_WITH_PICOGFX
+    KDEBUG(("atari_get_current_mode_info(): sshiftmod=%x (%x/%x)\n", sshiftmod, sshiftmod&0x7, FALCON_REZ ));
+    if( (sshiftmod & 0x7) == FALCON_REZ ) {
+        switch( current_video_mode & 0x7 ) {
+            case(0):
+                *planes = 1;
+                break;
+            case(1):
+                *planes = 2;
+                break;
+            case(3):
+                *planes = 8;
+                break;
+            case(2):
+            default:
+                *planes = 4;
+                break;
+        }
+        KDEBUG(("Hz=%x\n",((current_video_mode & 0x30) >> 4 ) ));
+        switch( (current_video_mode & 0x30) >> 4 ) {
+            case(1):
+                *hz_rez = 320;
+                break;
+            case(0):
+            default:
+                *hz_rez = 640;
+                break;
+        }
+        KDEBUG(("Vt=%x\n",((current_video_mode & 0xC0) >> 6 ) ));
+        switch( (current_video_mode & 0xC0) >> 6 ) {
+            case(1):
+                *vt_rez = 240;
+                break;
+            case(0):
+            default:
+                *vt_rez = 480;
+                break;
+        }
+        KDEBUG(("atari_get_current_mode_info(): current_video_mode=%x, hz_rez=%d, vt_rez=%d, planes=%d\n",
+            current_video_mode, *hz_rez, *vt_rez, *planes));
+    } else
+#endif
 #if CONF_WITH_VIDEL
     if (has_videl) {
         videl_get_current_mode_info(planes, hz_rez, vt_rez);
@@ -993,6 +1040,13 @@ static void atari_setrez(WORD rez, WORD videlmode)
             *(volatile UBYTE *)TT_SHIFTER = sshiftmod = rez;
     }
 #endif
+#ifdef CONF_WITH_PICOGFX
+    if( rez == 3 ) {        
+        //*(volatile UBYTE*)0x00F1DDB1 = 1;//videlmode & 0xff;
+        sshiftmod = rez;
+        current_video_mode = videlmode;
+    }
+#endif
     else if (rez < 3) {         /* ST resolution */
         *(volatile UBYTE *)ST_SHIFTER = sshiftmod = rez;
     }
@@ -1069,6 +1123,21 @@ WORD getrez(void)
 #endif
 }
 
+#ifdef CONF_WITH_PICOGFX
+WORD picogfx_setmode(WORD mode) {
+
+    WORD ret;
+
+    if( mode == -1 )
+        return current_video_mode;
+
+    //*PICOGFX_REG = (uint8_t)mode;
+    ret = current_video_mode;
+    current_video_mode = mode;
+    sshiftmod = FALCON_REZ;
+    return ret;
+}
+#endif
 
 /*
  * setscreen(): implement the Setscreen() xbios call
@@ -1089,6 +1158,8 @@ WORD setscreen(UBYTE *logLoc, const UBYTE *physLoc, WORD rez, WORD videlmode)
 {
     WORD oldmode = 0;
 
+    KDEBUG(( "setscreen(%p, %p, %x, %x)\n", logLoc, physLoc, rez, videlmode ));
+
     if ((LONG)logLoc > 0) {
         v_bas_ad = logLoc;
         KDEBUG(("v_bas_ad = %p\n", v_bas_ad));
@@ -1106,8 +1177,24 @@ WORD setscreen(UBYTE *logLoc, const UBYTE *physLoc, WORD rez, WORD videlmode)
     if ((rez < MIN_REZ) || (rez > MAX_REZ)) {
         return -1;
     }
+#ifdef CONF_WITH_PICOGFX
 
-#if CONF_WITH_VIDEL
+    if( rez == FALCON_REZ ) {
+        if (videlmode != -1) {
+//            videlmode = vfixmode(videlmode);
+            if (!logLoc && !physLoc) {
+                UBYTE *addr = (UBYTE *)Srealloc(0xff + 640*480/2 /*vgetsize(videlmode)*/ );
+                KDEBUG(("realloc() returned %p\n", addr));
+                if (!addr)      /* Srealloc() failed */
+                    return -1;
+                v_bas_ad = ((ULONG)addr & 0xffffff00)+0x100;
+                KDEBUG(("screen realloc'd to %p\n", v_bas_ad));
+                setphys(v_bas_ad);
+            }
+        }
+        oldmode = picogfx_setmode(-1);
+    }
+#elif CONF_WITH_VIDEL
     /*
      * if we have videl, and this is a mode change request:
      * 1. fixup videl mode
@@ -1130,6 +1217,7 @@ WORD setscreen(UBYTE *logLoc, const UBYTE *physLoc, WORD rez, WORD videlmode)
         }
     }
 #endif
+
 
     /* Wait for the end of display to avoid the plane-shift bug on ST */
     vsync();
