@@ -807,24 +807,24 @@ static void atari_get_current_mode_info(UWORD *planes, UWORD *hz_rez, UWORD *vt_
                 *planes = 4;
                 break;
         }
-        KDEBUG(("Hz=%x\n",((current_video_mode & 0x30) >> 4 ) ));
-        switch( (current_video_mode & 0x30) >> 4 ) {
+        KDEBUG(("Hz=%x\n",((current_video_mode & 0x8) >> 3 ) ));
+        switch( (current_video_mode & 0x8) >> 3 ) {
             case(1):
-                *hz_rez = 320;
-                break;
-            case(0):
-            default:
                 *hz_rez = 640;
                 break;
-        }
-        KDEBUG(("Vt=%x\n",((current_video_mode & 0xC0) >> 6 ) ));
-        switch( (current_video_mode & 0xC0) >> 6 ) {
-            case(1):
-                *vt_rez = 240;
-                break;
             case(0):
             default:
+                *hz_rez = 320;
+                break;
+        }
+        KDEBUG(("Vt=%x\n",((current_video_mode & 0x100) >> 8 ) ));
+        switch( (current_video_mode & 0x100) >> 8 ) {
+            case(0):
                 *vt_rez = 480;
+                break;
+            case(1):
+            default:
+                *vt_rez = 240;
                 break;
         }
         KDEBUG(("atari_get_current_mode_info(): current_video_mode=%x, hz_rez=%d, vt_rez=%d, planes=%d\n",
@@ -1042,9 +1042,26 @@ static void atari_setrez(WORD rez, WORD videlmode)
 #endif
 #ifdef CONF_WITH_PICOGFX
     if( rez == 3 ) {        
-        //*(volatile UBYTE*)0x00F1DDB1 = 1;//videlmode & 0xff;
-        sshiftmod = rez;
-        current_video_mode = videlmode;
+        if( videlmode & VIDEL_COMPAT ) {
+            switch(videlmode&VIDEL_BPPMASK){
+                case(VIDEL_1BPP):
+                    rez = 2;
+                    break;
+                case(VIDEL_2BPP):
+                    rez = 1;
+                    break;
+                case(VIDEL_4BPP):
+                default:
+                    rez = 0;
+                    break;                    
+            }
+            *(volatile UBYTE *)ST_SHIFTER = sshiftmod = rez;
+        }
+        else {
+            *(volatile UWORD*)0x00F1DDB0 = videlmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);
+            sshiftmod = rez;
+            current_video_mode = videlmode;
+        }
     }
 #endif
     else if (rez < 3) {         /* ST resolution */
