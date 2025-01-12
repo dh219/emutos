@@ -757,7 +757,8 @@ ULONG calc_vram_size(void)
     if (HAS_VIDEL)
         return FALCON_VRAM_SIZE + EXTRA_VRAM_SIZE;
 
-    vram_size = (ULONG)BYTES_LIN * V_REZ_VT;
+    //vram_size = (ULONG)BYTES_LIN * V_REZ_VT;
+    vram_size = (ULONG)640*480/2;
 
     /* TT TOS allocates 256 bytes more than actually needed. */
     if (HAS_TT_SHIFTER)
@@ -771,6 +772,7 @@ ULONG calc_vram_size(void)
      * of 256 bytes.  For compatibility with ST TOS, we also allocate
      * (at least) 768 bytes more than actually needed.
      */
+    KDEBUG(("Calculated vram_size of %ld\n", vram_size));
     return (vram_size + 768UL + 255UL) & ~255UL;
 #endif
 }
@@ -1058,7 +1060,7 @@ static void atari_setrez(WORD rez, WORD videlmode)
             *(volatile UBYTE *)ST_SHIFTER = sshiftmod = rez;
         }
         else {
-            if( check_read_byte(0x00F1DB0) )
+            if( check_read_byte(0x00F1DDB0) )
                 *(volatile UWORD*)0x00F1DDB0 = videlmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);                
             sshiftmod = rez;
             current_video_mode = videlmode;
