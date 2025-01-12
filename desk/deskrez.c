@@ -170,6 +170,7 @@ WORD mode, monitor;
     selected = i;
 
 #ifdef CONF_WITH_PICOGFX
+    selected = -1;
     monitor = MON_VGA;
 #else
     /* remember monitor type */

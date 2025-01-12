@@ -1058,7 +1058,8 @@ static void atari_setrez(WORD rez, WORD videlmode)
             *(volatile UBYTE *)ST_SHIFTER = sshiftmod = rez;
         }
         else {
-            *(volatile UWORD*)0x00F1DDB0 = videlmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);
+            if( check_read_byte(0x00F1DB0) )
+                *(volatile UWORD*)0x00F1DDB0 = videlmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);                
             sshiftmod = rez;
             current_video_mode = videlmode;
         }

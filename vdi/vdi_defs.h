@@ -17,7 +17,7 @@
 
 #define HAVE_BEZIER 0           /* switch on bezier capability - entirely untested */
 
-#define EXTENDED_PALETTE (CONF_WITH_VIDEL || CONF_WITH_TT_SHIFTER)
+#define EXTENDED_PALETTE (CONF_WITH_VIDEL || CONF_WITH_TT_SHIFTER || defined(CONF_WITH_PICOGFX) )
 
 #define TRUECOLOR_MODE  (v_planes > 8)
 
