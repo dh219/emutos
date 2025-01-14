@@ -1060,8 +1060,7 @@ static void atari_setrez(WORD rez, WORD videlmode)
             *(volatile UBYTE *)ST_SHIFTER = sshiftmod = rez;
         }
         else {
-            if( check_read_byte(0x00F1DDB0) )
-                *(volatile UWORD*)0x00F1DDB0 = videlmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);                
+            *(volatile UWORD*)0x00F1DDB0 = videlmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);                
             sshiftmod = rez;
             current_video_mode = videlmode;
         }
@@ -1081,6 +1080,20 @@ static WORD atari_setcolor(WORD colorNum, WORD color)
 
     KDEBUG(("Setcolor(0x%04x, 0x%04x)\n", colorNum, color));
 
+#ifdef CONF_WITH_PICOGFX
+    volatile LONG *longpalette = (LONG *) 0x00ff9800;
+    if( colorNum > 0x000f ) {
+        LONG red = (color >> 7) & 0xe;
+        LONG green = (color >> 3) & 0xe;
+        LONG blue = (color<<1) & 0xe;
+        LONG pal_entry = (red << 28) | (green<<20) | (blue<<4);
+        longpalette[colorNum] = pal_entry;
+
+        KDEBUG(("ddb0palette[%d] = %lx (%x)\n", colorNum, pal_entry, color ));
+
+        return oldcolor;
+    }
+#endif
     colorNum &= 0x000f;         /* just like real TOS */
 
     if (HAS_VIDEL || HAS_TT_SHIFTER || HAS_STE_SHIFTER)
@@ -1198,6 +1211,8 @@ WORD setscreen(UBYTE *logLoc, const UBYTE *physLoc, WORD rez, WORD videlmode)
         return -1;
     }
 #ifdef CONF_WITH_PICOGFX
+
+
 
     if( rez == FALCON_REZ ) {
         if (videlmode != -1) {
