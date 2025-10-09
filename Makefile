@@ -302,7 +302,7 @@ bios_src +=  memory.S processor.S vectors.S aciavecs.S bios.c xbios.c acsi.c \
              kprint.c kprintasm.S linea.S lineainit.c lineavars.S machine.c \
              mfp.c midi.c mouse.c natfeat.S natfeats.c nvram.c panicasm.S \
              parport.c screen.c serport.c sound.c videl.c vt52.c xhdi.c \
-             pmmu030.c 68040_pmmu.S \
+             pmmu030.c 68040_pmmu.S ddb1.c \
              amiga.c amiga2.S spi_vamp.c \
              lisa.c lisa2.S \
              delay.c delayasm.S sd.c memory2.c bootparams.c scsi.c nova.c \

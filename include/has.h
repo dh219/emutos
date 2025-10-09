@@ -51,6 +51,13 @@ extern int has_nova;    /* in nova.c */
   #define HAS_NOVA 0
 #endif
 
+#if CONF_WITH_DDB1
+extern int has_ddb1;
+  #define HAS_DDB1 has_ddb1
+#else
+  #define HAS_DDB1 0
+#endif
+
 #if CONF_WITH_TT_MFP
 extern int has_tt_mfp;
   #define HAS_TT_MFP has_tt_mfp

@@ -113,6 +113,9 @@
 # ifndef CONF_WITH_NOVA
 #  define CONF_WITH_NOVA 0
 # endif
+# ifndef CONF_WITH_DDB1
+#  define CONF_WITH_DDB1 0
+# endif
 # ifndef CONF_WITH_FORMAT
 #  define CONF_WITH_FORMAT 0
 # endif
@@ -194,6 +197,9 @@
 # ifndef CONF_WITH_NOVA
 #  define CONF_WITH_NOVA 0
 # endif
+# ifndef CONF_WITH_DDB1
+#  define CONF_WITH_DDB1 0
+# endif
 # ifndef CONF_WITH_FORMAT
 #  define CONF_WITH_FORMAT 0
 # endif
@@ -240,6 +246,9 @@
 # endif
 # ifndef CONF_WITH_NOVA
 #  define CONF_WITH_NOVA 0
+# endif
+# ifndef CONF_WITH_DDB1
+#  define CONF_WITH_DDB1 0
 # endif
 # ifndef CONF_WITH_TTRAM
 #  define CONF_WITH_TTRAM 0
@@ -542,6 +551,9 @@
 # ifndef CONF_WITH_NOVA
 #  define CONF_WITH_NOVA 0
 # endif
+# ifndef CONF_WITH_DDB1
+#  define CONF_WITH_DDB1 0
+# endif
 # ifndef MAX_VERTICES
 #  define MAX_VERTICES 512
 # endif
@@ -790,6 +802,9 @@
 # endif
 # ifndef CONF_WITH_NOVA
 #  define CONF_WITH_NOVA 0
+# endif
+# ifndef CONF_WITH_DDB1
+#  define CONF_WITH_DDB1 0
 # endif
 # ifndef CONF_WITH_ALT_DESKTOP_GRAPHICS
 #  define CONF_WITH_ALT_DESKTOP_GRAPHICS 0 /* Like ST, not Falcon */
@@ -1179,6 +1194,13 @@
 #ifndef CONF_WITH_NOVA
 # define CONF_WITH_NOVA 1
 #endif
+
+/*
+ * Set CONF_WITH_DDB1 to 1 to enable support for DDB1 Pico graphics board
+ */
+# ifndef CONF_WITH_DDB1
+#  define CONF_WITH_DDB1 0
+# endif
 
 /* Set CONF_WITH_FLEXCAN to 1 to enable support for the FlexCAN controller.
  * This allows use of an Eiffel keyboard adapter plugged into the CAN port
@@ -2177,6 +2199,13 @@
 #  error CONF_WITH_VDI_16BIT requires CONF_WITH_VIDEL
 # endif
 #endif
+
+#if CONF_WITH_DDB1
+# if CONF_WITH_VIDEL
+#  error CONF_WITH_DDB1 conflicts with CONF_WITH_VIDEL
+# endif
+#endif
+
 
 /*
  * Sanity checks for debugging options

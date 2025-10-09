@@ -42,6 +42,7 @@
 #include "nova.h"
 #include "biosext.h"
 #include "amiga.h"
+#include "ddb1.h"
 
 #if CONF_WITH_ADVANCED_CPU
 UBYTE is_bus32; /* 1 if address bus is 32-bit, 0 if it is 24-bit */
@@ -71,6 +72,9 @@ int has_tt_shifter;
 #endif
 #if CONF_WITH_VIDEL
 int has_videl;
+#endif
+#if CONF_WITH_DDB1
+int has_ddb1;
 #endif
 
 #if CONF_ATARI_HARDWARE
@@ -159,6 +163,11 @@ static void detect_video(void)
         *fbcr |= 0x25;  /* set STe Bus emulation off, 16MHz blitter & CPU */
     }
 #endif
+
+#if CONF_WITH_DDB1
+    detect_ddb1();
+#endif
+
 }
 
 #if CONF_WITH_TT_MFP
