@@ -19,6 +19,10 @@
 
 /* #define ENABLE_KDEBUG */
 
+#ifndef INITINFO_SHOWCALS
+#define INITINFO_SHOWCALS 0
+#endif
+
 #include "emutos.h"
 #include "nls.h"
 #include "ikbd.h"

@@ -48,7 +48,7 @@ void *video_ram_addr;
 
 #ifdef CONF_WITH_PICOGFX
 WORD picogfx_setmode(WORD mode);
-static WORD current_video_mode;
+//static WORD current_video_mode;
 #endif
 
 #if CONF_WITH_ATARI_VIDEO
@@ -978,6 +978,10 @@ static void atari_setphys(const UBYTE *addr)
 
     if (HAS_VIDEL || HAS_TT_SHIFTER || HAS_STE_SHIFTER)
         *(volatile UBYTE *) VIDEOBASE_ADDR_LOW = ((ULONG) addr);
+    
+#ifdef CONF_WITH_PICOGFX
+    *(volatile ULONG *) 0x410 = ((ULONG) addr);
+#endif
 }
 
 static WORD atari_getrez(void)
@@ -1060,7 +1064,8 @@ static void atari_setrez(WORD rez, WORD videlmode)
             *(volatile UBYTE *)ST_SHIFTER = sshiftmod = rez;
         }
         else {
-            *(volatile UWORD*)0x00F1DDB0 = videlmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);                
+//            *(volatile UWORD*)0x00F1DDB0 = videlmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);
+            *(volatile UWORD*)0x414 = videlmode & (VIDEL_VERTICAL|VIDEL_COMPAT|VIDEL_80COL|VIDEL_BPPMASK);
             sshiftmod = rez;
             current_video_mode = videlmode;
         }
