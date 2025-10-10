@@ -1088,14 +1088,15 @@ static WORD atari_setcolor(WORD colorNum, WORD color)
 #ifdef CONF_WITH_PICOGFX
     volatile LONG *longpalette = (LONG *) 0x00ff9800;
     if( colorNum > 0x000f ) {
-        LONG red = (color >> 7) & 0xe;
-        LONG green = (color >> 3) & 0xe;
-        LONG blue = (color<<1) & 0xe;
-        LONG pal_entry = (red << 28) | (green<<20) | (blue<<4);
-        longpalette[colorNum] = pal_entry;
-
-        KDEBUG(("ddb0palette[%d] = %lx (%x)\n", colorNum, pal_entry, color ));
-
+        if( check_read_byte(0x00ff9800) ) {
+            LONG red = (color >> 7) & 0xe;
+            LONG green = (color >> 3) & 0xe;
+            LONG blue = (color<<1) & 0xe;
+            LONG pal_entry = (red << 28) | (green<<20) | (blue<<4);
+            longpalette[colorNum] = pal_entry;
+        
+            KDEBUG(("ddb0palette[%d] = %lx (%x)\n", colorNum, pal_entry, color ));
+        }
         return oldcolor;
     }
 #endif
