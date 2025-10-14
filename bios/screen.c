@@ -1086,9 +1086,11 @@ static WORD atari_setcolor(WORD colorNum, WORD color)
     KDEBUG(("Setcolor(0x%04x, 0x%04x)\n", colorNum, color));
 
 #ifdef CONF_WITH_PICOGFX
-    volatile LONG *longpalette = (LONG *) 0x00ff9800;
+//#define PICOGFXPALETTE 0x00ff9800
+#define PICOGFXPALETTE 0x800
+    volatile LONG *longpalette = (LONG *) PICOGFXPALETTE;
     if( colorNum > 0x000f ) {
-        if( check_read_byte(0x00ff9800) ) {
+        if( check_read_byte(PICOGFXPALETTE) ) {
             LONG red = (color >> 7) & 0xe;
             LONG green = (color >> 3) & 0xe;
             LONG blue = (color<<1) & 0xe;
