@@ -1083,7 +1083,7 @@ static WORD atari_setcolor(WORD colorNum, WORD color)
     WORD mask;
     volatile WORD *palette = (WORD *) ST_PALETTE_REGS;
 
-    KDEBUG(("Setcolor(0x%04x, 0x%04x)\n", colorNum, color));
+/*    KDEBUG(("Setcolor(0x%04x, 0x%04x)\n", colorNum, color));*/
 
 #ifdef CONF_WITH_PICOGFX
 //#define PICOGFXPALETTE 0x00ff9800
@@ -1097,7 +1097,7 @@ static WORD atari_setcolor(WORD colorNum, WORD color)
             LONG pal_entry = (red << 28) | (green<<20) | (blue<<4);
             longpalette[colorNum] = pal_entry;
         
-            KDEBUG(("ddb0palette[%d] = %lx (%x)\n", colorNum, pal_entry, color ));
+/*            KDEBUG(("ddb0palette[%d] = %lx (%x)\n", colorNum, pal_entry, color ));*/
         }
         return oldcolor;
     }
@@ -1226,7 +1226,25 @@ WORD setscreen(UBYTE *logLoc, const UBYTE *physLoc, WORD rez, WORD videlmode)
         if (videlmode != -1) {
 //            videlmode = vfixmode(videlmode);
             if (!logLoc && !physLoc) {
-                UBYTE *addr = (UBYTE *)Srealloc(0xff + 640*480/2 /*vgetsize(videlmode)*/ );
+                ULONG screensize = 640L*480L;
+                switch( videlmode & 0x7 ) {
+                    case(0):
+                        screensize /= 8;
+                        break;
+                    case(1):
+                        screensize /= 4;
+                        break;
+                    case(2):
+                        screensize /= 2;
+                        break;
+                    case(3):
+                    default:
+                        break;
+                }
+                KDEBUG(("Requesting 0x%lx bytes from realloc() [our evaluation] 640=%lx, 480=%lx, 640*480=%lx\n", screensize, (ULONG)640, (ULONG)480, (ULONG)(640L*480L)  ));
+                KDEBUG(("vgetsize(%x) suggests 0x%lx\n", videlmode, vgetsize(videlmode) ));
+                UBYTE *addr = (UBYTE *)Srealloc(0xff + screensize );
+//                UBYTE *addr = (UBYTE *)Srealloc(0xff + vgetsize(videlmode) );
                 KDEBUG(("realloc() returned %p\n", addr));
                 if (!addr)      /* Srealloc() failed */
                     return -1;

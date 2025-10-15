@@ -727,8 +727,10 @@ LONG vgetsize(WORD inmode)
     int height;
     WORD mode, vctl;
 
+#ifndef CONF_WITH_PICOGFX
     if (!has_videl)
         return 0x5b;    /* unimplemented xbios call: return function # */
+#endif
 
     mode = inmode & VIDEL_VALID;    /* ignore invalid bits */
     if ((mode&VIDEL_BPPMASK) > VIDEL_TRUECOLOR) {   /* fixup invalid bpp */
