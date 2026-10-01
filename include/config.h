@@ -1569,7 +1569,7 @@
 
 /*
  * Set CONF_WITH_RAMDISC_SUPPORT to 1 to enable support for one 720k
- * RAMDISK if memory allows.
+ * RAMDISC if memory allows.
  * This is disabled by default because it is not a standard feature of TOS.
  */
 #ifndef CONF_WITH_RAMDISC_SUPPORT

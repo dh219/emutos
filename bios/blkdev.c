@@ -48,7 +48,7 @@ BLKDEV blkdev[BLKDEVNUM];
 static PUN_INFO pun_info;
 
 #if CONF_WITH_RAMDISC_SUPPORT
-static UBYTE *ramdisk;
+static UBYTE *ramdisc;
 #endif
 
 /*
@@ -114,20 +114,20 @@ void blkdev_init(void)
 }
 
 #if CONF_WITH_RAMDISC_SUPPORT
-void blkdev_ramdisk_init(void)
+void blkdev_ramdisc_init(void)
 {
-    BLKDEV *bdev = &blkdev[RAMDISK_DRIVE];
+    BLKDEV *bdev = &blkdev[RAMDISC_DRIVE];
     UBYTE *boot;
     UBYTE *fat;
 
-    ramdisk = xmxalloc(RAMDISK_SIZE, MX_STRAM);
-    if (!ramdisk)
+    ramdisc = xmxalloc(RAMDISC_SIZE, MX_STRAM);
+    if (!ramdisc)
         return;
-    set_owner(ramdisk, NULL);
+    set_owner(ramdisc, NULL);
 
-    memset(ramdisk, 0, RAMDISK_SIZE);
+    memset(ramdisc, 0, RAMDISC_SIZE);
 
-    boot = ramdisk;
+    boot = ramdisc;
     boot[0] = 0xeb;
     boot[1] = 0x3c;
     boot[2] = 0x90;
@@ -154,7 +154,7 @@ void blkdev_ramdisk_init(void)
     boot[510] = 0x55;
     boot[511] = 0xaa;
 
-    fat = ramdisk + SECTOR_SIZE;
+    fat = ramdisc + SECTOR_SIZE;
     fat[0] = 0xf9;
     fat[1] = 0xff;
     fat[2] = 0xff;
@@ -162,7 +162,7 @@ void blkdev_ramdisk_init(void)
 
     bdev->unit = -1;
     bdev->start = 0;
-    bdev->size = RAMDISK_SECTORS;
+    bdev->size = RAMDISC_SECTORS;
     bdev->flags = DEVICE_VALID | GETBPB_ALLOWED;
     bdev->mediachange = MEDIANOCHANGE;
     bdev->forcechange = FALSE;
@@ -176,7 +176,7 @@ void blkdev_ramdisk_init(void)
     bdev->bpb.numcl = 713;
     bdev->bpb.b_flags = 0;
 
-    drvbits |= (1L << RAMDISK_DRIVE);
+    drvbits |= (1L << RAMDISC_DRIVE);
 }
 #endif
 
@@ -505,19 +505,19 @@ static LONG blkdev_rwabs(WORD rw, UBYTE *buf, WORD cnt, WORD recnr, WORD dev, LO
         lrecnr = (UWORD)recnr;  /* recnr as unsigned to enable 16-bit recn */
 
 #if CONF_WITH_RAMDISC_SUPPORT
-    if (!(rw & RW_NOTRANSLATE) && (dev == RAMDISK_DRIVE)) {
-        if (!ramdisk)
+    if (!(rw & RW_NOTRANSLATE) && (dev == RAMDISC_DRIVE)) {
+        if (!ramdisc)
             return EUNDEV;
         if (blkdev[dev].forcechange)
             return E_CHNG;
         if ((rw & RW_WRITE) && (lrecnr == 0))
             blkdev[dev].forcechange = TRUE;
-        if ((lrecnr < 0) || ((ULONG)lrecnr + (UWORD)cnt > RAMDISK_SECTORS))
+        if ((lrecnr < 0) || ((ULONG)lrecnr + (UWORD)cnt > RAMDISC_SECTORS))
             return ESECNF;
         if (rw & RW_WRITE)
-            memcpy(ramdisk + lrecnr * SECTOR_SIZE, buf, (ULONG)(UWORD)cnt * SECTOR_SIZE);
+            memcpy(ramdisc + lrecnr * SECTOR_SIZE, buf, (ULONG)(UWORD)cnt * SECTOR_SIZE);
         else {
-            memcpy(buf, ramdisk + lrecnr * SECTOR_SIZE, (ULONG)(UWORD)cnt * SECTOR_SIZE);
+            memcpy(buf, ramdisc + lrecnr * SECTOR_SIZE, (ULONG)(UWORD)cnt * SECTOR_SIZE);
             instruction_cache_kludge(buf, (ULONG)(UWORD)cnt * SECTOR_SIZE);
         }
         return 0L;
@@ -679,7 +679,7 @@ LONG blkdev_getbpb(WORD dev)
     }
 
 #if CONF_WITH_RAMDISC_SUPPORT
-    if (dev == RAMDISK_DRIVE) {
+    if (dev == RAMDISC_DRIVE) {
         bdev->mediachange = MEDIANOCHANGE;
         bdev->forcechange = FALSE;
         return (LONG)&bdev->bpb;
@@ -892,7 +892,7 @@ static LONG blkdev_mediach(WORD dev)
         return EUNDEV;  /* unknown device */
 
 #if CONF_WITH_RAMDISC_SUPPORT
-    if (dev == RAMDISK_DRIVE)
+    if (dev == RAMDISC_DRIVE)
         return b->forcechange ? MEDIACHANGE : MEDIANOCHANGE;
 #endif
 

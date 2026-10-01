@@ -575,7 +575,7 @@ static void bios_init(void)
     KDEBUG(("after osinit_after_xmaddalt()\n"));
 
 #if CONF_WITH_RAMDISC_SUPPORT
-    blkdev_ramdisk_init();
+    blkdev_ramdisc_init();
 #endif
 
     boot_status |= DOS_AVAILABLE;   /* track progress */

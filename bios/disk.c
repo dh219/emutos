@@ -321,7 +321,7 @@ void disk_init_all(void)
         devices_available |= bitmask;
 
 #if CONF_WITH_RAMDISC_SUPPORT
-    devices_available &= ~(1L << RAMDISK_DRIVE);
+    devices_available &= ~(1L << RAMDISC_DRIVE);
 #endif
 
     /* scan for attached harddrives and their partitions */
