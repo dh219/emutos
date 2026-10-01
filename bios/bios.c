@@ -573,6 +573,11 @@ static void bios_init(void)
     KDEBUG(("osinit_after_xmaddalt()\n"));
     osinit_after_xmaddalt();    /* initialize BDOS (part 2) */
     KDEBUG(("after osinit_after_xmaddalt()\n"));
+
+#if CONF_WITH_RAMDISC_SUPPORT
+    blkdev_ramdisk_init();
+#endif
+
     boot_status |= DOS_AVAILABLE;   /* track progress */
 
     /* Enable VBL processing */

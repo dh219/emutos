@@ -320,6 +320,10 @@ void disk_init_all(void)
     for (i = 2, bitmask = 0x04L; i < BLKDEVNUM; i++, bitmask <<= 1)
         devices_available |= bitmask;
 
+#if CONF_WITH_RAMDISC_SUPPORT
+    devices_available &= ~(1L << RAMDISK_DRIVE);
+#endif
+
     /* scan for attached harddrives and their partitions */
     for(i = 0; i < ARRAY_SIZE(majors); i++) {
         UWORD unit = NUMFLOPPIES + majors[i];

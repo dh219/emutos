@@ -1567,6 +1567,15 @@
 # define CONF_WITH_GPT_SUPPORT 1
 #endif
 
+/*
+ * Set CONF_WITH_RAMDISC_SUPPORT to 1 to enable support for one 720k
+ * RAMDISK if memory allows.
+ * This is disabled by default because it is not a standard feature of TOS.
+ */
+#ifndef CONF_WITH_RAMDISC_SUPPORT
+# define CONF_WITH_RAMDISC_SUPPORT 0
+#endif
+
 
 /********************************************************
  *  S O F T W A R E   S E C T I O N   -   G E M D O S   *

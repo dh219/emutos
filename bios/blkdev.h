@@ -39,6 +39,12 @@
 #define HARDDISK_BOOTDEV    2   /* i.e. C: */
 #define DEFAULT_BOOTDEV     HARDDISK_BOOTDEV
 
+#if CONF_WITH_RAMDISC_SUPPORT
+#define RAMDISK_DRIVE       25
+#define RAMDISK_SECTORS     1440UL
+#define RAMDISK_SIZE        (RAMDISK_SECTORS * SECTOR_SIZE)
+#endif
+
 /* Original FAT12 bootsector */
 struct bs {
   /*   0 */  UBYTE bra[2];
@@ -101,6 +107,10 @@ typedef struct _geometry GEOMETRY;
 
 /* Init block device vectors */
 void blkdev_init(void);
+
+#if CONF_WITH_RAMDISC_SUPPORT
+void blkdev_ramdisk_init(void);
+#endif
 
 /* general block device functions */
 LONG blkdev_boot(void);

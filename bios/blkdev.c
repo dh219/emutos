@@ -24,6 +24,9 @@
 #include "disk.h"
 #include "ikbd.h"
 #include "blkdev.h"
+#if CONF_WITH_RAMDISC_SUPPORT
+#include "../bdos/mem.h"
+#endif
 #include "processor.h"
 #include "acsi.h"
 #include "scsi.h"
@@ -43,6 +46,10 @@
 BLKDEV blkdev[BLKDEVNUM];
 
 static PUN_INFO pun_info;
+
+#if CONF_WITH_RAMDISC_SUPPORT
+static UBYTE *ramdisk;
+#endif
 
 /*
  * Function prototypes
@@ -105,6 +112,73 @@ void blkdev_init(void)
     /* setting drvbits */
     blkdev_hdv_init();
 }
+
+#if CONF_WITH_RAMDISC_SUPPORT
+void blkdev_ramdisk_init(void)
+{
+    BLKDEV *bdev = &blkdev[RAMDISK_DRIVE];
+    UBYTE *boot;
+    UBYTE *fat;
+
+    ramdisk = xmxalloc(RAMDISK_SIZE, MX_STRAM);
+    if (!ramdisk)
+        return;
+    set_owner(ramdisk, NULL);
+
+    memset(ramdisk, 0, RAMDISK_SIZE);
+
+    boot = ramdisk;
+    boot[0] = 0xeb;
+    boot[1] = 0x3c;
+    boot[2] = 0x90;
+    memcpy(boot + 3, "EmuTOS  ", 8);
+    boot[11] = 0x00;
+    boot[12] = 0x02;
+    boot[13] = 2;
+    boot[14] = 1;
+    boot[16] = 2;
+    boot[17] = 112;
+    boot[19] = 0xa0;
+    boot[20] = 0x05;
+    boot[21] = 0xf9;
+    boot[22] = 3;
+    boot[24] = 9;
+    boot[26] = 2;
+    boot[38] = 0x29;
+    boot[39] = 0x45;
+    boot[40] = 0x54;
+    boot[41] = 0x4f;
+    boot[42] = 0x53;
+    memcpy(boot + 43, "RAM DISK   ", 11);
+    memcpy(boot + 54, "FAT12   ", 8);
+    boot[510] = 0x55;
+    boot[511] = 0xaa;
+
+    fat = ramdisk + SECTOR_SIZE;
+    fat[0] = 0xf9;
+    fat[1] = 0xff;
+    fat[2] = 0xff;
+    memcpy(fat + 3 * SECTOR_SIZE, fat, 3);
+
+    bdev->unit = -1;
+    bdev->start = 0;
+    bdev->size = RAMDISK_SECTORS;
+    bdev->flags = DEVICE_VALID | GETBPB_ALLOWED;
+    bdev->mediachange = MEDIANOCHANGE;
+    bdev->forcechange = FALSE;
+    bdev->bpb.recsiz = SECTOR_SIZE;
+    bdev->bpb.clsiz = 2;
+    bdev->bpb.clsizb = 2 * SECTOR_SIZE;
+    bdev->bpb.rdlen = 7;
+    bdev->bpb.fsiz = 3;
+    bdev->bpb.fatrec = 4;
+    bdev->bpb.datrec = 14;
+    bdev->bpb.numcl = 713;
+    bdev->bpb.b_flags = 0;
+
+    drvbits |= (1L << RAMDISK_DRIVE);
+}
+#endif
 
 /*
  * set up an AHDI-compatible PUN_INFO structure
@@ -430,6 +504,26 @@ static LONG blkdev_rwabs(WORD rw, UBYTE *buf, WORD cnt, WORD recnr, WORD dev, LO
     if (recnr != -1)            /* if long offset not used */
         lrecnr = (UWORD)recnr;  /* recnr as unsigned to enable 16-bit recn */
 
+#if CONF_WITH_RAMDISC_SUPPORT
+    if (!(rw & RW_NOTRANSLATE) && (dev == RAMDISK_DRIVE)) {
+        if (!ramdisk)
+            return EUNDEV;
+        if (blkdev[dev].forcechange)
+            return E_CHNG;
+        if ((rw & RW_WRITE) && (lrecnr == 0))
+            blkdev[dev].forcechange = TRUE;
+        if ((lrecnr < 0) || ((ULONG)lrecnr + (UWORD)cnt > RAMDISK_SECTORS))
+            return ESECNF;
+        if (rw & RW_WRITE)
+            memcpy(ramdisk + lrecnr * SECTOR_SIZE, buf, (ULONG)(UWORD)cnt * SECTOR_SIZE);
+        else {
+            memcpy(buf, ramdisk + lrecnr * SECTOR_SIZE, (ULONG)(UWORD)cnt * SECTOR_SIZE);
+            instruction_cache_kludge(buf, (ULONG)(UWORD)cnt * SECTOR_SIZE);
+        }
+        return 0L;
+    }
+#endif
+
     retry_count = (rw & RW_NORETRIES) ? 1 : RWABS_RETRIES;
 
     /*
@@ -583,6 +677,14 @@ LONG blkdev_getbpb(WORD dev)
         KDEBUG(("device is invalid\n"));
         return 0L;  /* unknown device */
     }
+
+#if CONF_WITH_RAMDISC_SUPPORT
+    if (dev == RAMDISK_DRIVE) {
+        bdev->mediachange = MEDIANOCHANGE;
+        bdev->forcechange = FALSE;
+        return (LONG)&bdev->bpb;
+    }
+#endif
 
     unit = bdev->unit;
 
@@ -788,6 +890,11 @@ static LONG blkdev_mediach(WORD dev)
 
     if ((dev < 0 ) || (dev >= BLKDEVNUM) || !(b->flags&DEVICE_VALID))
         return EUNDEV;  /* unknown device */
+
+#if CONF_WITH_RAMDISC_SUPPORT
+    if (dev == RAMDISK_DRIVE)
+        return b->forcechange ? MEDIACHANGE : MEDIANOCHANGE;
+#endif
 
     unit = b->unit;
 
